@@ -1,0 +1,6 @@
+Black and White Data  存放黑白矫正的数据
+Package 各种处理算法包
+Processing_data 处理数据文件夹，主程序运行
+Ref data 校准数据，波形数据和理化值
+Result 结果数据保存路径
+Source data 样品光谱数据存放路径

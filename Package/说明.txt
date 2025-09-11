@@ -1,0 +1,5 @@
+First_work 第一步工作目录文件夹
+Modeling 模型建模文件夹
+Pre-processing 预处理算法文件夹
+Sample_selsect 样品选择算法文件夹
+Wave_select 波形选择算法文件夹
