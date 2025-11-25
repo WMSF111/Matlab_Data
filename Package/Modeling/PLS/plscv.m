@@ -1,3 +1,4 @@
+%此代码主要用于实现PLS模型的交叉验证，选择最佳的潜在变量数，并通过计算误差指标（如RMSECV、Q²等）来评估模型的性能。
 function CV=plscv(X,y,A,K,method,PROCESS,order)
 %+++ K-fold Cross-validation for PLS PLS的K倍交叉验证
 %+++ Input:  X: m x n  (Sample matrix)   输入X： m x n（样本矩阵）

@@ -4,11 +4,11 @@ close;
 
 % 数据预处理
 %% 初始化
-folder = 'D:\\Desktop';   %本文件夹存储位置
+folder = 'E:\study\algriothm\matlab';   %本文件夹存储位置
 % 光谱波形数据文件
-Wave_folder = sprintf('%s\\Data processing\\data\\wavelength144.mat',folder);
+Wave_folder = sprintf('%s\\Data processing\\data\\column_data.mat',folder);
 % 采集样品光谱数据文件
-Black_White_Data_folder = sprintf('%s\\Data processing\\Result\\Black_White\\post_processing_data.xlsx',folder);
+Black_White_Data_folder = sprintf('%s\\Data processing\\Result\\Black_White\\merged_second_columns.csv',folder);
 % 平滑数据保存文件
 smooth_mat_file_name = sprintf('%s\\Data processing\\Result\\Smooth\\PH\\Smooth_Results.mat', ...
                        folder);
@@ -34,16 +34,16 @@ Post_smooth_data = Zero_data;    %用于下方数据更改方便
 %% 预处理数据画图
 fig_smooth = figure(1);             %创建图像窗口
 subplot(2,2,1);              %4个子图像，在第1个窗口画图
-plot(wavelength144,data);    %原始光谱
+plot(column_data,data);    %原始光谱
 title(" source data");        %添加标题
 subplot(2,2,2);              %4个子图像，在第2个窗口画图
-plot(wavelength144,SG_data); %SG光谱
+plot(column_data,SG_data); %SG光谱
 title(" SG data ");           %添加标题
 subplot(2,2,3);              %4个子图像，在第3个窗口画图
-plot(wavelength144,MSC_data); %SNV光谱
+plot(column_data,MSC_data); %SNV光谱
 title(" SNV data ");       %添加标题
 subplot(2,2,4);              %4个子图像，在第4个窗口画图
-plot(wavelength144,SNV_data); %MSC光谱
+plot(column_data,SNV_data); %MSC光谱
 title(" Std data ");       %添加标题
 save(smooth_mat_file_name, 'Post_smooth_data')
 saveas(fig_smooth, smooth_file_name, 'tiff');    %保存数据

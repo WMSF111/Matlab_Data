@@ -4,7 +4,7 @@ close;
 
 % 黑白矫正
 %% 保存文件夹
-folder = 'D:\\Desktop';   %本文件夹存储位置
+folder = 'E:\study\algriothm\matlab';   %本文件夹存储位置
 black_and_white_file_name = '1-0.csv'; %黑白矫正数据文件名
 
 %csv文件未处理数据所在目录

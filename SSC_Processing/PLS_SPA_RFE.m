@@ -3,7 +3,7 @@ clear;
 close; 
 
 %% 初始化
-folder = 'D:\\Desktop';   % 本文件夹存储位置
+folder = 'E:\study\algriothm\matlab';   % 本文件夹存储位置
 physical_file_name = 'sweet.xlsx';  % 理化值文件名
 Smooth_folder = sprintf('%s\\Data processing\\Result\\Smooth\\SSC\\Smooth_Results.mat',folder);% 光谱波形数据文件
 Psyhical_data_folder = sprintf('%s\\Data processing\\data\\physical\\%s',folder,physical_file_name); % 样品理化值数据文件

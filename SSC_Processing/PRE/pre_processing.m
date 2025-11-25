@@ -4,24 +4,25 @@ close;
 
 % 数据预处理
 %% 初始化
-folder = 'D:\\Desktop';   %本文件夹存储位置
+folder = 'E:\study\algriothm\matlab';   %本文件夹存储位置
 % 光谱波形数据文件
 Wave_folder = sprintf('%s\\Data processing\\data\\wavelength144.mat',folder);
 % 采集样品光谱数据文件
 Black_White_Data_folder = sprintf('%s\\Data processing\\Result\\Black_White\\post_processing_data.xlsx',folder);
-% 平滑数据保存文件
+% 平滑数据保存mat文件
 smooth_mat_file_name = sprintf('%s\\Data processing\\Result\\Smooth\\SSC\\Smooth_Results.mat', ...
                        folder);
+%平滑数据保存tif照片
 smooth_file_name = sprintf('%s\\Data processing\\Result\\Smooth\\SSC\\Smooth_Results.tif', ...
                    folder);  
 %% 加载数据
-load(Wave_folder);                                     %波长数据读取
+load(Wave_folder);  %加载 Wave_folder 路径指定的 .mat 文件中的所有变量
 data = xlsread(Black_White_Data_folder);               %光谱数据读取
 data =  data(1:120,:);
 %% 数据预处理 SG+SNV+归一化
 
 SG_data = SG(data,2,13); %SG滤波
-MSC_data = MSC(SG_data);
+MSC_data = MSC(SG_data); %多元散射校正法
 
 % MSC_data = SG_data;
 % SNV_data = SNV(MSC_data); %SNV
@@ -46,5 +47,7 @@ title(" SNV data ");       %添加标题
 subplot(2,2,4);              %4个子图像，在第4个窗口画图
 plot(wavelength144,SNV_data); %MSC光谱
 title(" Std data ");       %添加标题
+%save 用于保存 数据变量 到 .mat 文件，方便后续加载和计算。
+%saveas 用于保存 图形对象（图形、图表等）为图像文件，适合报告展示、分享等。
 save(smooth_mat_file_name, 'Post_smooth_data')
 saveas(fig_smooth, smooth_file_name, 'tiff');    %保存数据
