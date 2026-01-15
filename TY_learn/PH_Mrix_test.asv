@@ -1,0 +1,13 @@
+% 1. 读取 Excel 数据
+data = readmatrix('70_PH_Mrix.xlsx'); % 读取所有数值数据到一个矩阵中
+
+% 2. 提取变量 (假设第一列是 X，第二列是 Y)
+cdate = data(:, 1); % 提取第一列作为 X 轴数据
+for i = 2:7
+
+    pop = data(:, 2);   % 提取第二列作为 Y 轴数据
+
+    % 3. 后续的拟合代码保持不变
+    plot(cdate, pop, 'o'); % 绘制原始数据
+    f = fit(cdate, pop, 'poly2'); % 进行拟合
+end
