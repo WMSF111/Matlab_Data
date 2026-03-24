@@ -1,0 +1,2 @@
+component	explained_variance_ratio	cumulative_variance
+1	1.0	1.0

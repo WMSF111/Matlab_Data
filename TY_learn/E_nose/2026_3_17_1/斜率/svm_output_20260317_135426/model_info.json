@@ -1,0 +1,57 @@
+{
+  "dataset_info": {
+    "samples": 21,
+    "features": 16,
+    "classes": 2,
+    "class_names": [
+      "the_0",
+      "the_1"
+    ]
+  },
+  "model_params": {
+    "kernel": "rbf",
+    "C": 1.0,
+    "gamma": "scale",
+    "degree": 3,
+    "coef0": 0.0,
+    "shrinking": true,
+    "probability": false,
+    "tol": 0.001,
+    "cache_size": 200,
+    "random_state": 42
+  },
+  "performance": {
+    "train_accuracy": 0.7142857142857143,
+    "test_accuracy": 0.8571428571428571,
+    "support_vectors_count": 10,
+    "support_vectors_ratio": 0.7142857142857143
+  },
+  "classification_report": {
+    "the_0": {
+      "precision": 1.0,
+      "recall": 0.5,
+      "f1-score": 0.6666666666666666,
+      "support": 2.0
+    },
+    "the_1": {
+      "precision": 0.8333333333333334,
+      "recall": 1.0,
+      "f1-score": 0.9090909090909091,
+      "support": 5.0
+    },
+    "accuracy": 0.8571428571428571,
+    "macro avg": {
+      "precision": 0.9166666666666667,
+      "recall": 0.75,
+      "f1-score": 0.7878787878787878,
+      "support": 7.0
+    },
+    "weighted avg": {
+      "precision": 0.880952380952381,
+      "recall": 0.8571428571428571,
+      "f1-score": 0.8398268398268397,
+      "support": 7.0
+    }
+  },
+  "top_features": []
+}

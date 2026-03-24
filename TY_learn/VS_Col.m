@@ -7,9 +7,15 @@
 % % 文件列表
 % fileNames = {'90_2_液体_众数.csv', '90_1_液体_众数.csv', '90_1_固体_众数.csv',...
 %     '90_2_固体_众数.csv'}; 
-fileNames = {'70_PH_Mrix_1.xlsx', '70_PH_Mrix_2.xlsx', '70_PH_Mrix_3.xlsx',...
-    '80_PH_Mrix_1.xlsx', '80_PH_Mrix_2.xlsx', '80_PH_Mrix_3.xlsx',...
-    '90_PH_Mrix_2.xlsx', '90_PH_Mrix_3.xlsx'}; 
+% fileNames = {'70_PH_Mrix_1.xlsx', '70_PH_Mrix_2.xlsx', '70_PH_Mrix_3.xlsx',...
+%     '80_PH_Mrix_1.xlsx', '80_PH_Mrix_2.xlsx', '80_PH_Mrix_3.xlsx',...
+%     '90_PH_Mrix_2.xlsx', '90_PH_Mrix_3.xlsx'}; 
+set(0,'DefaultAxesFontName','SimHei');  % 黑体
+set(0,'DefaultTextFontName','SimHei');
+set(0,'DefaultLegendFontName','SimHei');
+dataFolder = 'NIR';  % 你的文件夹名称
+fileNames = {'90_PH_Mrix_2_1.xlsx', '90_PH_Mrix_2_2.xlsx', '90_PH_Mrix_2_3.xlsx',...
+    '90_PH_Mrix_3_1.xlsx', '90_PH_Mrix_3_2.xlsx', '90_PH_Mrix_3_3.xlsx'}; 
 
 baseColors = lines(3); 
 fileColors = repelem(baseColors, 3, 1);
@@ -50,7 +56,8 @@ for colIdx = 2:7
         
         % 此处为了演示，模拟一下读取和计算过程（实际请保留你原有的读取/计算代码）
         % -----------------------------------------------------------
-        fname = fileNames{fIdx};
+        % fname = fileNames{fIdx};
+        fname = fullfile(dataFolder, fileNames{fIdx});
         try
              T = readtable(fname);
         catch
@@ -66,7 +73,7 @@ for colIdx = 2:7
         % -----------------------------------------------------------
 
         % --- E. 绘图 ---
-        p = plot(cdate, f(cdate), ...
+        p = plot(cdate, pop_norm, ...
              'Color', fileColors(fIdx, :), ...
              'LineStyle', lineStyles{fIdx}, ...
              'LineWidth', 2, ...

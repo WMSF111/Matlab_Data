@@ -1,0 +1,56 @@
+{
+  "dataset_info": {
+    "samples": 21,
+    "features": 16,
+    "target_variable": "target",
+    "feature_variables": [
+      "MQ3",
+      "MQ135",
+      "TGS2600",
+      "TGS2602",
+      "TGS2603",
+      "TGS2609",
+      "TGS2610",
+      "SYG9",
+      "MQ137",
+      "MQ138",
+      "TGS2611",
+      "TGS2612",
+      "TGS2618",
+      "TGS2619",
+      "TGS2620",
+      "SY1B"
+    ],
+    "target_used": true
+  },
+  "model_params": {
+    "target_column": "target",
+    "features_only": false,
+    "standardize": true,
+    "n_components": 2,
+    "n_neighbors": 10,
+    "reg": 0.001,
+    "eigen_solver": "auto",
+    "tol": 1e-06,
+    "max_iter": 100,
+    "method": "standard",
+    "neighbors_algorithm": "auto",
+    "random_state": null,
+    "ellipse_confidence": 0.95,
+    "color_by_target": true,
+    "analyze_neighbors": true,
+    "neighbors_range": "5,15,5"
+  },
+  "lle_results": {
+    "n_components": 2,
+    "n_neighbors": 10,
+    "method": "standard",
+    "reconstruction_error": 8.459287535505487e-05,
+    "embedding_dimensions": 2
+  },
+  "files": {
+    "lle_embedding": "lle_embedding.txt",
+    "lle_2d_data": "lle_2d_embedding_data.csv",
+    "neighbors_analysis_data": "lle_neighbors_analysis_data.txt"
+  }
+}

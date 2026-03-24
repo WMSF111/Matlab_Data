@@ -1,0 +1,94 @@
+{
+  "dataset_info": {
+    "samples": 21,
+    "features": 16,
+    "classes": 2,
+    "class_names": [
+      "the_0",
+      "the_1"
+    ]
+  },
+  "model_params": {
+    "solver": "svd",
+    "shrinkage": null,
+    "priors": null,
+    "n_components": null,
+    "store_covariance": false,
+    "tol": 0.0001
+  },
+  "performance": {
+    "train_accuracy": 1.0,
+    "test_accuracy": 0.7142857142857143,
+    "lda_components": 1,
+    "n_features": 16
+  },
+  "classification_report": {
+    "the_0": {
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1-score": 0.6666666666666666,
+      "support": 2.0
+    },
+    "the_1": {
+      "precision": 1.0,
+      "recall": 0.6,
+      "f1-score": 0.75,
+      "support": 5.0
+    },
+    "accuracy": 0.7142857142857143,
+    "macro avg": {
+      "precision": 0.75,
+      "recall": 0.8,
+      "f1-score": 0.7083333333333333,
+      "support": 7.0
+    },
+    "weighted avg": {
+      "precision": 0.8571428571428571,
+      "recall": 0.7142857142857143,
+      "f1-score": 0.7261904761904762,
+      "support": 7.0
+    }
+  },
+  "top_features": [
+    {
+      "feature": "MQ137",
+      "importance": 602.0930517792007
+    },
+    {
+      "feature": "TGS2600",
+      "importance": 599.7679975308871
+    },
+    {
+      "feature": "MQ3",
+      "importance": 494.28370805428295
+    },
+    {
+      "feature": "TGS2603",
+      "importance": 479.59955643465804
+    },
+    {
+      "feature": "TGS2620",
+      "importance": 334.9978564421115
+    },
+    {
+      "feature": "TGS2612",
+      "importance": 319.1908600642061
+    },
+    {
+      "feature": "MQ138",
+      "importance": 281.0241148144649
+    },
+    {
+      "feature": "SYG9",
+      "importance": 255.29753591651777
+    },
+    {
+      "feature": "TGS2609",
+      "importance": 190.98244963674605
+    },
+    {
+      "feature": "TGS2619",
+      "importance": 185.67168306081498
+    }
+  ]
+}
