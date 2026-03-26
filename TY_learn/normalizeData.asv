@@ -1,0 +1,76 @@
+function [normData] = normalizeData(data, method)
+% 通用归一化函数（支持多种方法，无工具箱依赖）
+% 调用方法：normData = normalizeData(原始数据, '方法名');
+% 方法列表：
+% 'maxmin'     - 最大最小归一化 [0,1]
+% 'zscore'     - Z-score 标准化（均值0，方差1）
+% 'mean'       - 均值归一化（你现在用的）
+% 'maxabs'     - 最大绝对值归一化 [-1,1]
+% 'robust'     - 鲁棒归一化（抗异常值，无工具箱依赖）
+
+% 预处理：转数值 + 剔除NaN
+data = double(data);
+data(data(:) == inf | data(:) == -inf) = nan;
+validData = data(~isnan(data));
+
+if isempty(validData)
+    normData = data;
+    return;
+end
+
+switch lower(method)
+    % ========== 你原来的 3 种 ==========
+    case 'maxmin'
+        min_val = min(validData);
+        max_val = max(validData);
+        if abs(max_val - min_val) < 1e-8
+            normData = data - min_val;
+        else
+            normData = (data - min_val) / (max_val - min_val);
+        end
+        
+    case 'zscore'
+        mu = mean(validData);
+        sigma = std(validData);
+        if sigma < 1e-8
+            normData = data - mu;
+        else
+            normData = (data - mu) / sigma;
+        end
+        
+    case 'mean' % 你现在用的均值归一化
+        mu = mean(validData);
+        min_val = min(validData);
+        max_val = max(validData);
+        if abs(max_val - min_val) < 1e-8
+            normData = data - mu;
+        else
+            normData = (data - mu) / (max_val - min_val);
+        end
+
+    % ========== 额外加的方法 ==========
+    case 'maxabs'
+        max_abs = max(abs(validData));
+        if max_abs < 1e-8
+            normData = data;
+        else
+            normData = data / max_abs;
+        end
+        
+    case 'robust'
+        % 纯手工实现，不依赖任何工具箱
+        med = median(validData);
+        abs_diff = abs(validData - med);
+        mad_val = median(abs_diff); % 真正的MAD计算，无依赖
+        
+        if mad_val < 1e-8
+            normData = data - med;
+        else
+            normData = (data - med) / mad_val;
+        end
+        
+        
+    otherwise
+        error('不支持的归一化方法：%s', method);
+end
+end
