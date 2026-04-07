@@ -7,18 +7,18 @@ clc;
 % dataFolder = 'E_nose'; % 示例：'实验数据' 或 'D:\project\data'
 % 
 % % 文件列表
-% fileNames = {'90_2_液体_众数.csv', '90_1_液体_众数.csv', '90_1_固体_众数.csv',...
-%     '90_2_固体_众数.csv'}; 
-% fileNames = {'90_PH_Mrix_1.xlsx', '90_PH_Mrix_2.xlsx', '90_PH_Mrix_3.xlsx',...
-%     '90_PH_Mrix_1.xlsx', '90_PH_Mrix_2.xlsx', '90_PH_Mrix_3.xlsx',...
-%     '90_PH_Mrix_2.xlsx', '90_PH_Mrix_3.xlsx'}; 
+% fileNames = {'80_2_液体_众数.csv', '80_1_液体_众数.csv', '80_1_固体_众数.csv',...
+%     '80_2_固体_众数.csv'}; 
+% fileNames = {'80_PH_Mrix_1.xlsx', '80_PH_Mrix_2.xlsx', '80_PH_Mrix_3.xlsx',...
+%     '80_PH_Mrix_1.xlsx', '80_PH_Mrix_2.xlsx', '80_PH_Mrix_3.xlsx',...
+%     '80_PH_Mrix_2.xlsx', '80_PH_Mrix_3.xlsx'}; 
 set(0,'DefaultAxesFontName','SimHei');  % 黑体
 set(0,'DefaultTextFontName','SimHei');
 set(0,'DefaultLegendFontName','SimHei');
 dataFolder = 'NIR';  % 你的文件夹名称
-fileNames = {'90_PH_Mrix_1_1.xlsx', '90_PH_Mrix_1_2.xlsx', '90_PH_Mrix_1_3.xlsx',...
-    '90_PH_Mrix_2_1.xlsx', '90_PH_Mrix_2_2.xlsx', '90_PH_Mrix_2_3.xlsx',...
-    '90_PH_Mrix_3_1.xlsx', '90_PH_Mrix_3_2.xlsx', '90_PH_Mrix_3_3.xlsx'}; 
+fileNames = {'80_PH_Mrix_1_1.xlsx', '80_PH_Mrix_1_2.xlsx', '80_PH_Mrix_1_3.xlsx',...
+    '80_PH_Mrix_2_1.xlsx', '80_PH_Mrix_2_2.xlsx', '80_PH_Mrix_2_3.xlsx',...
+    '80_PH_Mrix_3_1.xlsx', '80_PH_Mrix_3_2.xlsx', '80_PH_Mrix_3_3.xlsx'}; 
 
 baseColors = lines(3); 
 fileColors = repelem(baseColors, 3, 1);
@@ -39,7 +39,7 @@ title(t, '不同文件下各列数据归一化趋势及顶点标记', 'FontSize'
 % 【新增】用于临时存储图例需要的线条句柄
 legendHandles = []; 
 
-refFileName = '90_PH_Mrix_2_2.xlsx';
+refFileName = '80_PH_Mrix_2_2.xlsx';
 
 for colIdx = 2:numVars + 1
     varIdx = colIdx - 1;
