@@ -1,49 +1,49 @@
 ﻿%% ========================
-%% 电子鼻特征组合聚类/分类工具
-%% 自动组合 | 自动绘图 | 自动输出簇内类别 | 自动检查分类效果
+%% 鐢靛瓙榧?鑷姩鐗瑰緛缁勫悎鑱氱被宸ュ叿銆?5缁勮秴寮虹増銆?%% 鑷姩缁勫悎 | 鑷姩鍑哄浘 | 鑷姩杈撳嚭绨囧唴瀹?| 鑷姩妫€鏌ュ垎绫绘晥鏋?%% ========================
 clear; clc; close all;
 set(0,'DefaultAxesFontName','SimHei');
 set(0,'DefaultAxesFontName','SimHei');
-%% 1. 路径
+
+%% 1. 璺緞
 rootDirs = {
-    '90\1_去基\奇数', ...
-    '90\2_去基\偶数', ...
-    '90\1_去基\奇数', ...
-    '90\2_去基\偶数', ...
-    '80\1_去基\奇数', ...
-    '80\2_去基\奇数', ...
-    '80\3_去基\奇数', ...
-    '80\1_去基\偶数', ...
-    '80\2_去基\偶数', ...
-    '80\3_去基\偶数',...
-    '70\1_去基\奇数', ...
-    '70\2_去基\奇数', ...
-    '70\3_去基\奇数', ...
-    '70\1_去基\偶数', ...
-    '70\2_去基\偶数', ...
-    '70\3_去基\偶数'...
+    '90\1_鍘诲熀\濂囨暟', ...
+    '90\2_鍘诲熀\鍋舵暟', ...
+    '90\1_鍘诲熀\濂囨暟', ...
+    '90\2_鍘诲熀\鍋舵暟', ...
+    '80\1_鍘诲熀\濂囨暟', ...
+    '80\2_鍘诲熀\濂囨暟', ...
+    '80\3_鍘诲熀\濂囨暟', ...
+    '80\1_鍘诲熀\鍋舵暟', ...
+    '80\2_鍘诲熀\鍋舵暟', ...
+    '80\3_鍘诲熀\鍋舵暟',...
+    '70\1_鍘诲熀\濂囨暟', ...
+    '70\2_鍘诲熀\濂囨暟', ...
+    '70\3_鍘诲熀\濂囨暟', ...
+    '70\1_鍘诲熀\鍋舵暟', ...
+    '70\2_鍘诲熀\鍋舵暟', ...
+    '70\3_鍘诲熀\鍋舵暟'...
 };
 % rootDirs = {
-%     '90\1\奇数', ...
-%     '90\2\偶数', ...
-%     '90\1\奇数', ...
-%     '90\2\偶数', ...
-%     '80\1\奇数', ...
-%     '80\2\奇数', ...
-%     '80\3\奇数', ...
-%     '80\1\偶数', ...
-%     '80\2\偶数', ...
-%     '80\3\偶数',...
-%     '70\1\奇数', ...
-%     '70\2\奇数', ...
-%     '70\3\奇数', ...
-%     '70\1\偶数', ...
-%     '70\2\偶数', ...
-%     '70\3\偶数'...
+%     '90\1\濂囨暟', ...
+%     '90\2\鍋舵暟', ...
+%     '90\1\濂囨暟', ...
+%     '90\2\鍋舵暟', ...
+%     '80\1\濂囨暟', ...
+%     '80\2\濂囨暟', ...
+%     '80\3\濂囨暟', ...
+%     '80\1\鍋舵暟', ...
+%     '80\2\鍋舵暟', ...
+%     '80\3\鍋舵暟',...
+%     '70\1\濂囨暟', ...
+%     '70\2\濂囨暟', ...
+%     '70\3\濂囨暟', ...
+%     '70\1\鍋舵暟', ...
+%     '70\2\鍋舵暟', ...
+%     '70\3\鍋舵暟'...
 % };
 classNumbers = 0:20;
-%% 2. 读取全部数据并提取特征
-allData = [];
+
+%% 2. 璇诲彇鎵€鏈夋暟鎹?+ 鎻愬彇浣犵殑鍏ㄩ儴鐗瑰緛锛堜笉鍔ㄤ綘鐨勪唬鐮侊紒锛?allData = [];
 allFilePaths = {};
 allLabels = [];
 allTempLabels = [];
@@ -87,15 +87,13 @@ for cls = classNumbers
 end
 
 % ================================
-% 特征名，和上面的特征顺序严格对应
-% ================================
+% 鐗瑰緛鍚嶅瓧锛堝拰涓婇潰椤哄簭涓ユ牸瀵瑰簲锛?% ================================
 featNames = {
     'mean','max','min','auc','sum', 'med', 'mode', 'std','slope','cv'
 };
 
 %% ==================================================================
-%% 特征组合与名称
-%% ==================================================================
+%% 鐗瑰緛缁勫悎 + 鍚嶇О 銆愬畬鍏ㄥ搴斻€?%% ==================================================================
 featureGroups = {
     [1],[2],[3],[4],[5],[6],[7],[8],[9],[10],...
     [1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[1,8],[1,9],[1,10],...
@@ -118,10 +116,10 @@ featureGroups = {
 };
 
 % ================================
-% groupNames 与 featureGroups 一一对应
+% 鉁?淇锛歡roupNames 瀹屽叏瀵瑰簲
 % ================================
 groupNames = {
-    '均值','最大值','最小值','面积','总和','中位数','众数','标准差','斜率','变异系数',...
+    '鍧囧€?,'鏈€澶у€?,'鏈€灏忓€?,'闈㈢Н','鎬诲拰','涓綅鏁?,'浼楁暟','鏍囧噯宸?,'鏂滅巼','鍙樺紓绯绘暟',...
     '1-2','1-3','1-4','1-5','1-6','1-7','1-8','1-9','1-10',...
     '2-3','2-4','2-5','2-6','2-7','2-8','2-9','2-10',...
     '3-4','3-5','3-6','3-7','3-8','3-9','3-10',...
@@ -137,20 +135,19 @@ groupNames = {
     '1+2+4+5+6+10','1+2+3+4+5+6','5+6+7+8+9+10',...
     '2+5+6+7+8+9+10','1+2+4+5+6+9+10','1+2+4+5+6+7+10',...
     '1+2+4+5+6+7+9+10','2+3+5+6+7+8+9+10',...
-    '9特征全集','10特征全集'
+    '9鐗瑰緛鍏ㄩ泦','10鐗瑰緛缁堟瀬鍏ㄩ泦'
 };
 
 num_clusters = 3;
 
-% 算法选择:
-% 可视化模式: 'none' -> 仅评估并绘制二维可分性
-% 无监督学习: 'hierarchical', 'kmeans', 'gmm', 'spectral', 'dbscan'
-% 有监督学习: 'svm', 'knn', 'rf', 'lda'
-algorithm = 'gmm';
+% 绠楁硶閫夋嫨:
+% 鍙鍖栨ā寮? 'none' -> 浠呰瘎浼板苟缁樺埗浜岀淮鍙垎鎬?% 鏃犵洃鐫ｅ涔? 'hierarchical', 'kmeans', 'gmm', 'spectral', 'dbscan'
+% 鏈夌洃鐫ｅ涔?   'svm', 'knn', 'rf', 'lda'
+algorithm = 'kmeans';
 labelMode = 'temp';  % 'class' = 0-20, 'temp' = 70/80/90
 supervisedAlgorithms = {'svm','knn','rf','lda'};
-topKToPrint = 5; % 输出前 topK 个结果
-enableParamSearch = true;
+topKToPrint = 5; % 杈撳嚭鍑嗙‘鐜囧墠topK鐨勭粍鍚?enableParamSearch = true;
+enableDimSearch = true;
 
 dimReductionModes = {'none', 'pca', 'svd', 'mds', 'tsne'};
 pcaDimList = [2, 3, 5];
@@ -183,25 +180,24 @@ supervisedResults = struct('groupIdx', {}, 'groupName', {}, ...
     'misIdx', {}, 'misTrue', {}, 'misPred', {}, 'misFiles', {});
 unsupervisedResults = struct('groupIdx', {}, 'groupName', {}, ...
     'featureText', {}, 'algorithm', {}, 'labelName', {}, ...
-    'dimText', {}, 'purity', {}, 'clusterIdx', {}, ...
-    'labels', {}, 'filePaths', {});
+    'dimText', {}, 'silhouette', {}, 'clusterIdx', {});
 visualResults = struct('groupIdx', {}, 'groupName', {}, ...
     'featureText', {}, 'accuracy', {}, 'labelName', {}, ...
     'dimText', {}, 'map2d', {}, 'labels', {}, ...
     'predLabels', {}, 'misIdx', {}, 'paramText', {});
 
 %% ==================================================================
-%% 遍历 + 聚类/分类 + 输出
+%% 閬嶅巻 + 鑱氱被 + 杈撳嚭
 %% ==================================================================
 for g = 1:length(featureGroups)
-    featIdx = featureGroups{g};
+    featIdx = featureGroups{g}; 
     [X, Xn, nDim] = prepare_feature_matrix(allData, featIdx);
     rng(1);
     [Y, labelName] = get_labels_by_mode(labelMode, allLabels, allTempLabels);
 
     if strcmpi(lower(algorithm), 'none')
         visualResult = evaluate_visual_mode(Xn, Y, featIdx, g, groupNames, ...
-            featNames, labelName, knn2dNeighbors, knn2dDistances, dimConfig);
+            featNames, labelName, knn2dNeighbors, knn2dDistances);
         if ~isempty(visualResult)
             visualResults(end+1) = visualResult;
         end
@@ -222,8 +218,8 @@ for g = 1:length(featureGroups)
     end
 
     [cluster_idx, map, unsupDimText, unsupScore] = evaluate_unsupervised_mode( ...
-        Xn, Y, algorithm, num_clusters, dimConfig);
-    fprintf('[Unsupervised] best dim mode: %s | purity=%.4f\n', ...
+        Xn, algorithm, num_clusters, dimConfig);
+    fprintf('[Unsupervised] best dim mode: %s | silhouette=%.4f\n', ...
         unsupDimText, unsupScore);
     unsupervisedResults(end+1) = struct( ...
         'groupIdx', g, ...
@@ -232,10 +228,8 @@ for g = 1:length(featureGroups)
         'algorithm', algorithm, ...
         'labelName', labelName, ...
         'dimText', unsupDimText, ...
-        'purity', unsupScore, ...
-        'clusterIdx', cluster_idx, ...
-        'labels', Y, ...
-        'filePaths', {allFilePaths});
+        'silhouette', unsupScore, ...
+        'clusterIdx', cluster_idx);
     % 异常点
     try
         [~,score] = pca(Xn);
@@ -313,12 +307,13 @@ for g = 1:length(featureGroups)
         %     text(map(i,1)+0.05, map(i,2)+0.05, sprintf('%d',gasNum),'FontSize',10);
         % end
         % 
-        % title(sprintf('聚类结果 | 组合%d: %s', g, groupNames{g}), 'FontSize', 14);
+        % title(sprintf('鑱氱被鏁堟灉 | 缁勫悎%d锛?s',g,groupNames{g}),'FontSize',14);
         % xlabel('t-SNE Dimension 1','FontSize',12);
         % ylabel('t-SNE Dimension 2','FontSize',12);
-        % legend('簇1','簇2','簇3','异常点','Location','best');
+        % legend('绨?','绨?','绨?','寮傚父鐐?,'Location','best');
         % hold off;
-        % saveas(gcf, sprintf('聚类图_组合%d.png', g)); % 如需自动保存图片，可取消注释
+        % saveas(gcf, sprintf('鑱氱被鍥綺缁勫悎%d.png',g)); % 濡傞渶鑷姩淇濆瓨鍥剧墖锛屾墦寮€杩欒
+    end
 end
 
 if ismember(lower(algorithm), supervisedAlgorithms)
@@ -333,7 +328,7 @@ if ~strcmpi(lower(algorithm), 'none') && ~ismember(lower(algorithm), supervisedA
     print_top_unsupervised_results(unsupervisedResults, topKToPrint);
 end
 
-fprintf('\n全部运行完毕！\n');
+fprintf('\n鍏ㄩ儴杩愯瀹屾瘯锛乗n');
 
 function [X, Xn, nDim] = prepare_feature_matrix(allData, featIdx)
 X = allData(:, featIdx);
@@ -356,7 +351,7 @@ end
 end
 
 function result = evaluate_visual_mode(Xn, Y, featIdx, g, groupNames, featNames, ...
-    labelName, knn2dNeighbors, knn2dDistances, dimConfig)
+    labelName, knn2dNeighbors, knn2dDistances)
 result = struct();
 
 fprintf('\n[2D] Feature group %d -> %s\n', g, groupNames{g});
@@ -378,8 +373,9 @@ if nDim == 1
     mapCandidates(end+1).map2d = [Xn, zeros(size(Xn,1),1)];
     mapCandidates(end).dimText = 'raw-1d-to-2d';
 else
-    rawCandidates = build_dimensionality_candidates(Xn, dimConfig, max(2, size(Xn,2)));
-    mapCandidates = convert_candidates_to_2d(rawCandidates);
+    visualDimConfig = struct('modes', {{'pca'}}, 'pcaDims', 2, ...
+        'tsnePerplexities', [], 'mdsDistance', 'euclidean');
+    mapCandidates = build_dimensionality_candidates(Xn, visualDimConfig, 2);
     if nDim == 2
         rawCandidate.map2d = Xn;
         rawCandidate.dimText = 'raw-2d';
@@ -580,7 +576,7 @@ drawnow;
 end
 
 function [cluster_idx, bestMap, bestDimText, bestScore] = evaluate_unsupervised_mode( ...
-    Xn, Y, algorithm, num_clusters, dimConfig)
+    Xn, algorithm, num_clusters, dimConfig)
 candidates = build_dimensionality_candidates(Xn, dimConfig, max(2, size(Xn,2)));
 if isempty(candidates)
     candidates = build_dimensionality_candidates(Xn, dimConfig, max(2, size(Xn,2)), {'none'});
@@ -598,7 +594,7 @@ for idx = 1:numel(candidates)
     drawnow;
 
     currentCluster = run_unsupervised_clustering(Xcluster, algorithm, num_clusters);
-    currentScore = compute_unsupervised_score(currentCluster, Y);
+    currentScore = compute_unsupervised_score(Xcluster, currentCluster);
 
     if currentScore > bestScore
         bestScore = currentScore;
@@ -649,32 +645,18 @@ switch lower(algorithm)
 end
 end
 
-function score = compute_unsupervised_score(cluster_idx, Y)
+function score = compute_unsupervised_score(Xinput, cluster_idx)
 validClusters = unique(cluster_idx);
 if numel(validClusters) < 2
     score = -inf;
     return;
 end
 
-scoreCount = 0;
-for k = validClusters(:)'
-    idx = find(cluster_idx == k);
-    if isempty(idx)
-        continue;
-    end
-    clusterLabels = Y(idx);
-    uniqueLabels = unique(clusterLabels);
-    counts = zeros(numel(uniqueLabels), 1);
-    for i = 1:numel(uniqueLabels)
-        counts(i) = sum(clusterLabels == uniqueLabels(i));
-    end
-    scoreCount = scoreCount + max(counts);
-end
-
-if numel(Y) == 0
+try
+    s = silhouette(Xinput, cluster_idx);
+    score = mean(s);
+catch
     score = -inf;
-else
-    score = scoreCount / numel(Y);
 end
 end
 
@@ -723,18 +705,10 @@ for modeIdx = 1:numel(dimModes)
             if size(Xn,1) < 3
                 continue;
             end
-            try
-                D = pdist(Xn, mdsDistance);
-                mapMds = mdscale(D, 2, 'Start', 'cmdscale');
-                if all(isfinite(mapMds), 'all')
-                    candidates(end+1).map2d = mapMds;
-                    candidates(end).dimText = sprintf('mds(2 dims, %s)', mdsDistance);
-                end
-            catch mdsErr
-                fprintf('[DimSkip] mds failed: %s\n', mdsErr.message);
-                drawnow;
-                continue;
-            end
+            D = pdist(Xn, mdsDistance);
+            mapMds = mdscale(D, 2, 'Start', 'cmdscale');
+            candidates(end+1).map2d = mapMds;
+            candidates(end).dimText = sprintf('mds(2 dims, %s)', mdsDistance);
         case 'tsne'
             if size(Xn,1) < 3
                 continue;
@@ -745,17 +719,9 @@ for modeIdx = 1:numel(dimModes)
                 validPerps = maxPerplexity;
             end
             for perp = validPerps
-                try
-                    mapTsne = tsne(Xn, 'NumDimensions', 2, 'Perplexity', perp);
-                    if all(isfinite(mapTsne), 'all')
-                        candidates(end+1).map2d = mapTsne;
-                        candidates(end).dimText = sprintf('tsne(2 dims, perp=%d)', perp);
-                    end
-                catch tsneErr
-                    fprintf('[DimSkip] tsne failed (perp=%d): %s\n', perp, tsneErr.message);
-                    drawnow;
-                    continue;
-                end
+                mapTsne = tsne(Xn, 'NumDimensions', 2, 'Perplexity', perp);
+                candidates(end+1).map2d = mapTsne;
+                candidates(end).dimText = sprintf('tsne(2 dims, perp=%d)', perp);
             end
         otherwise
             error('Unknown dim reduction mode: %s', currentMode);
@@ -767,42 +733,6 @@ function validDims = get_valid_linear_dims(dataDim, maxLinearDim, pcaDimList)
 validDims = unique(pcaDimList(pcaDimList <= min(dataDim, maxLinearDim)));
 if isempty(validDims)
     validDims = min(2, min(dataDim, maxLinearDim));
-end
-end
-
-function mapCandidates2d = convert_candidates_to_2d(rawCandidates)
-mapCandidates2d = struct('map2d', {}, 'dimText', {});
-
-for idx = 1:numel(rawCandidates)
-    Xcand = rawCandidates(idx).map2d;
-    dimText = rawCandidates(idx).dimText;
-
-    if isempty(Xcand) || any(~isfinite(Xcand), 'all')
-        continue;
-    end
-
-    nDim = size(Xcand, 2);
-    if nDim == 1
-        map2d = [Xcand, zeros(size(Xcand,1),1)];
-        dimText2d = sprintf('%s -> plot2d(raw-1d)', dimText);
-    elseif nDim == 2
-        map2d = Xcand;
-        dimText2d = dimText;
-    else
-        try
-            [~, score2d, ~, ~, explained2d] = pca(Xcand);
-            map2d = score2d(:,1:2);
-            dimText2d = sprintf('%s -> plot2d(pca2, %.2f%% var)', ...
-                dimText, sum(explained2d(1:2)));
-        catch
-            continue;
-        end
-    end
-
-    if all(isfinite(map2d), 'all')
-        mapCandidates2d(end+1).map2d = map2d;
-        mapCandidates2d(end).dimText = dimText2d;
-    end
 end
 end
 
@@ -861,7 +791,7 @@ if isempty(unsupervisedResults)
     return;
 end
 
-allScores = [unsupervisedResults.purity];
+allScores = [unsupervisedResults.silhouette];
 [~, sortIdx] = sort(allScores, 'descend');
 topN = min(topKToPrint, numel(sortIdx));
 
@@ -875,27 +805,7 @@ for i = 1:topN
     fprintf('\nRank %d | Feature group %d -> %s\n', i, result.groupIdx, result.groupName);
     fprintf('Features: %s\n', result.featureText);
     fprintf('Best setup: %s + %s\n', result.algorithm, result.dimText);
-    fprintf('Purity: %.4f\n', result.purity);
-    print_unsupervised_cluster_details(result);
-end
-end
-
-function print_unsupervised_cluster_details(result)
-clusterIds = unique(result.clusterIdx(:))';
-for k = clusterIds
-    idx = find(result.clusterIdx == k);
-    clusterLabels = result.labels(idx);
-    uniqueLabels = unique(clusterLabels);
-    fprintf('Cluster %d | samples: %d | labels: ', k, numel(idx));
-    fprintf('%g ', uniqueLabels);
-    fprintf('\n');
-    for labelVal = uniqueLabels'
-        labelCount = sum(clusterLabels == labelVal);
-        fprintf('  label %g: %d\n', labelVal, labelCount);
-    end
-    for j = 1:numel(idx)
-        fprintf('  [%g] %s\n', result.labels(idx(j)), result.filePaths{idx(j)});
-    end
+    fprintf('Silhouette: %.4f\n', result.silhouette);
 end
 end
 
@@ -965,4 +875,7 @@ end
 hold off;
 saveas(fig, sprintf('top2d_rank%d_group%d.png', rankIdx, result.groupIdx));
 end
+%{
 
+fprintf('\n馃帀 鍏ㄩ儴杩愯瀹屾瘯锛乗n');
+%}
