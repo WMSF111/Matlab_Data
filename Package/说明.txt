@@ -1,5 +1,191 @@
-First_work 第一步工作目录文件夹
-Modeling 模型建模文件夹
-Pre-processing 预处理算法文件夹
-Sample_selsect 样品选择算法文件夹
-Wave_select 波形选择算法文件夹
+﻿Package 文件说明（Data processing 项目）
+
+说明原则
+- 本说明覆盖 Package 目录下当前全部文件。
+- 每个文件给出一句用途说明，便于快速定位。
+- Modeling/PLS 下大量函数来自 libPLS 工具链，优先按“建模核心、验证、变量选择、可视化、工具函数、示例数据”分组说明。
+
+一、根目录
+1. 说明.txt
+- Package 总体说明文档（本文件）。
+
+二、Black white（黑白矫正）
+1. Black white/Black_White_Processing.m
+- 读取 NIR csv，按分组求平均并进行黑白矫正，输出 post_processing_data.xlsx。
+
+三、Feature_select（特征筛选）
+1. Feature_select/feature_select_corr_topk.m
+- 按每个波段与目标值 Pearson 相关系数绝对值排序，选择 Top-K 特征。
+
+四、Pre_processing（光谱预处理）
+1. Pre_processing/SG.m
+- Savitzky-Golay 平滑/导数预处理。
+2. Pre_processing/MSC.m
+- 多元散射校正（MSC）。
+3. Pre_processing/SNV.m
+- 标准正态变量变换（SNV）。
+4. Pre_processing/normalization.m
+- 数据归一化处理。
+5. Pre_processing/Standardization.m
+- 标准化（通常是零均值单位方差）。
+6. Pre_processing/mean_centering.m
+- 均值中心化。
+7. Pre_processing/detrending.m
+- 去趋势处理。
+8. Pre_processing/move_smooth.m
+- 滑动平滑。
+
+五、Sample_selsect（样本选择）
+1. Sample_selsect/KS.m
+- Kennard-Stone 样本划分（训练/测试集选择）。
+2. Sample_selsect/SPXY.m
+- SPXY 样本划分接口文件（当前文件为空占位）。
+
+六、Wave_select（波段选择）
+1. Wave_select/SPA.m
+- SPA（Successive Projections Algorithm）变量/波段筛选。
+2. Wave_select/PCA.m
+- PCA 降维/主成分提取。
+
+七、Modeling/PLS（libPLS 核心工具）
+A. 建模核心
+1. Modeling/PLS/pls.m
+- PLS 回归主函数。
+2. Modeling/PLS/plsnipals.m
+- NIPALS 方式求解 PLS。
+3. Modeling/PLS/plsval.m
+- 用训练好的 PLS 模型进行预测。
+4. Modeling/PLS/plslda.m
+- PLS-DA 分类模型。
+5. Modeling/PLS/opls.m
+- OPLS 建模。
+6. Modeling/PLS/mwpls.m
+- 移动窗口 PLS。
+7. Modeling/PLS/ecr.m
+- ECR（弹性成分回归）建模。
+8. Modeling/PLS/ecrpred.m
+- ECR 模型预测。
+9. Modeling/PLS/oscwold.m
+- OSC（Wold 版本）正交信号校正。
+10. Modeling/PLS/oscfearn.m
+- OSC（Fearn 版本）正交信号校正。
+
+B. 交叉验证/验证评估
+11. Modeling/PLS/plscv.m
+- PLS 交叉验证，选最优潜变量数。
+12. Modeling/PLS/plsmccv.m
+- Monte Carlo CV for PLS。
+13. Modeling/PLS/plsdcv.m
+- 双重交叉验证（DCV）。
+14. Modeling/PLS/plsrdcv.m
+- 重复双重交叉验证（RDCV）。
+15. Modeling/PLS/plsldacv.m
+- PLS-DA 交叉验证。
+16. Modeling/PLS/plsldamccv.m
+- PLS-DA Monte Carlo CV。
+17. Modeling/PLS/plsldaval.m
+- PLS-DA 外部验证。
+18. Modeling/PLS/ecrcv.m
+- ECR 交叉验证。
+19. Modeling/PLS/compute_pvalue.m
+- 统计显著性/概率相关计算。
+20. Modeling/PLS/roccurve.m
+- ROC 曲线评估。
+21. Modeling/PLS/prcurve.m
+- PR 曲线评估。
+
+C. 变量选择/筛选
+22. Modeling/PLS/carspls.m
+- CARS-PLS 变量筛选。
+23. Modeling/PLS/carspls_mccv.m
+- CARS-PLS + MCCV。
+24. Modeling/PLS/carsplslda.m
+- CARS for PLS-DA。
+25. Modeling/PLS/spa.m
+- SPA 变量筛选（libPLS 版本）。
+26. Modeling/PLS/iriv.m
+- IRIV 变量筛选。
+27. Modeling/PLS/irf.m
+- 迭代随机蛙跳/相关筛选流程辅助。
+28. Modeling/PLS/randomfrog_pls.m
+- Random Frog for PLS。
+29. Modeling/PLS/randomfrog_plslda.m
+- Random Frog for PLS-DA。
+30. Modeling/PLS/mcuvepls.m
+- MCUVE 变量筛选（PLS）。
+31. Modeling/PLS/mcuveplslda.m
+- MCUVE 变量筛选（PLS-DA）。
+32. Modeling/PLS/phadia.m
+- PHADIA 变量诊断/筛选。
+33. Modeling/PLS/modelpath.m
+- 模型路径信息生成。
+34. Modeling/PLS/modelpath.m
+- 不同变量子集下模型路径分析（同名功能说明保留）。
+35. Modeling/PLS/vip.m
+- 变量重要性（VIP）计算。
+36. Modeling/PLS/vcn.m
+- 变量贡献度/相关指标计算。
+37. Modeling/PLS/mcs.m
+- Monte Carlo Sampling 工具。
+
+D. 可视化
+38. Modeling/PLS/plotcars.m
+- CARS 筛选过程可视化。
+39. Modeling/PLS/plotcars_plslda.m
+- CARS-PLSDA 可视化。
+40. Modeling/PLS/plotspa.m
+- SPA 选择结果可视化。
+41. Modeling/PLS/plotlda.m
+- LDA 结果可视化。
+42. Modeling/PLS/plotpath.m
+- 模型路径可视化。
+43. Modeling/PLS/plotmcs.m
+- MCS 结果可视化。
+44. Modeling/PLS/plotphadia.m
+- PHADIA 图示。
+45. Modeling/PLS/plotphadiavar.m
+- PHADIA 变量图示。
+46. Modeling/PLS/classplot2.m
+- 分类结果散点图工具。
+47. Modeling/PLS/histfitnew.m
+- 直方图拟合绘图工具。
+48. Modeling/PLS/axisrange.m
+- 绘图坐标轴范围辅助。
+
+E. 数值与底层工具
+49. Modeling/PLS/csvd.m
+- 稀疏/截断 SVD 相关计算。
+50. Modeling/PLS/powermethod.m
+- 幂法求解特征值/特征向量。
+51. Modeling/PLS/splineValue.m
+- 样条插值辅助。
+52. Modeling/PLS/sumsqr.m
+- 平方和计算辅助。
+53. Modeling/PLS/tp.m
+- 阈值/转折点类辅助函数。
+54. Modeling/PLS/databin.m
+- 数据分箱处理。
+55. Modeling/PLS/pretreat.m
+- 预处理调度接口（libPLS 内部）。
+56. Modeling/PLS/ks.m
+- libPLS 内置 KS 采样函数。
+57. Modeling/PLS/ldapinv.m
+- LDA 相关矩阵逆/伪逆辅助。
+
+F. 示例/文档/数据
+58. Modeling/PLS/demo_PLS_Regression.m
+- PLS 回归示例脚本。
+59. Modeling/PLS/demo_PLS_Discriminant_Analysis.m
+- PLS-DA 示例脚本。
+60. Modeling/PLS/demo_Elastic_Component_Regression_ECR.m
+- ECR 示例脚本。
+61. Modeling/PLS/description_libPLS.pdf
+- libPLS 说明文档。
+62. Modeling/PLS/corn_m51.mat
+- 示例数据集。
+63. Modeling/PLS/DM2.mat
+- 示例/辅助数据。
+
+备注
+- 若你后续新增特征筛选算法（如 UVE、GA、Boruta），建议统一放在 Package/Feature_select。
+- 若某函数来自第三方库（如 libPLS），建议优先保持原文件名，避免与主工程函数冲突。
