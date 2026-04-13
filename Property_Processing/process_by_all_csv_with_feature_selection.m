@@ -1,29 +1,29 @@
-ï»¿% åŠŸèƒ½ï¼šæŒ‰ all_csv_data.csv åˆ—å¤´å»ºæ¨¡ï¼ˆåŒ…å«ç‰¹å¾ç­›é€‰ï¼‰
-% ç¤ºä¾‹ï¼š
+% ¹¦ÄÜ£º°´ all_csv_data.csv ÁĞÍ·½¨Ä££¨ÏÈÌØÕ÷É¸Ñ¡£¬ÔÙ½¨Ä££©
+% Ê¾Àı£º
 %   process_by_all_csv_with_feature_selection('a*')
 %   process_by_all_csv_with_feature_selection('a*','sg+msc+snv',3,15,'corr_topk',120)
-function process_by_all_csv_with_feature_selection(property_name, preproc_mode, sg_order, sg_window, fs_method, top_k)
+%   process_by_all_csv_with_feature_selection('a*','sg+msc',3,15,'cars',30)
+function process_by_all_csv_with_feature_selection(property_name, preproc_mode, sg_order, sg_window, fs_method, fs_param)
 
 if nargin < 1 || isempty(property_name)
-    error('property_name å¿…å¡«ï¼Œä¾‹å¦‚ï¼š''a*''ã€‚');
+    error('property_name ±ØÌî£¬ÀıÈç£º''a*''¡£');
 end
 if nargin < 2 || isempty(preproc_mode), preproc_mode = 'sg+msc'; end
 if nargin < 3 || isempty(sg_order), sg_order = 3; end
 if nargin < 4 || isempty(sg_window), sg_window = 15; end
 if nargin < 5 || isempty(fs_method), fs_method = 'corr_topk'; end
-if nargin < 6 || isempty(top_k), top_k = 120; end
+if nargin < 6, fs_param = []; end
 
 project_root = fileparts(fileparts(mfilename('fullpath')));
 addpath(fullfile(project_root, 'Package', 'Training'), '-begin');
 addpath(genpath(fullfile(project_root, 'Package')));
 
-% 1) é»‘ç™½çŸ«æ­£ï¼ˆä»…ä¿ç•™ä¸€ä¸ªæ ¸å¿ƒå‡½æ•°ï¼‰
 black_dir = fullfile(project_root, 'data', 'Black white');
 if exist(fullfile(black_dir, 'black.csv'), 'file')
     black_file_name = 'black.csv';
 else
     cands = dir(fullfile(black_dir, '*.csv'));
-    if isempty(cands), error('æœªæ‰¾åˆ°é»‘ç™½å‚è€ƒæ–‡ä»¶ã€‚'); end
+    if isempty(cands), error('Î´ÕÒµ½ºÚ°×²Î¿¼ÎÄ¼ş¡£'); end
     black_file_name = cands(1).name;
 end
 csv_folder = fullfile(project_root, 'data', 'NIR');
@@ -32,43 +32,34 @@ black_out = fullfile(project_root, 'Result', 'Black_White', 'post_processing_dat
 if exist(black_out, 'file'), delete(black_out); end
 Black_White_Processing(csv_folder, black_file, black_out);
 
-% 2) ç”Ÿæˆç›®æ ‡å‘é‡ y
-[y, ~] = build_property_vector_from_all_csv('data\physical\all_csv_data.csv', property_name, 'data\NIR', 3);
+[y, ~] = build_property_vector_from_all_csv('data\physical\all_csv_data.csv', property_name, 'data\NIR', 1);
 sample_count = numel(y);
 
 safe_tag = regexprep(char(property_name), '[^a-zA-Z0-9_]', '_');
 time_tag = datestr(now, 'yyyymmdd_HHMMSS');
-tag_fs = fullfile(safe_tag, ['FS_', time_tag]);
+tag_fs = fullfile(safe_tag, ['FS_', upper(fs_method), '_', time_tag]);
 
-% 3) é¢„å¤„ç†
 pre_processing_common(tag_fs, sg_order, sg_window, sample_count, preproc_mode);
 smooth_path = fullfile(project_root, 'Result', 'Smooth', tag_fs, 'Smooth_Results.mat');
 S = load(smooth_path, 'Post_smooth_data');
 X = S.Post_smooth_data(1:sample_count, :);
 
-% 4) ç‰¹å¾ç­›é€‰
-switch lower(fs_method)
-    case 'corr_topk'
-        [selected_idx, score_abs] = feature_select_corr_topk(X, y, top_k);
-    otherwise
-        error('æš‚ä¸æ”¯æŒçš„ç‰¹å¾ç­›é€‰æ–¹æ³•ï¼š%s', fs_method);
-end
+fs_result = select_features_by_method(X, y, fs_method, fs_param);
+selected_idx = fs_result.selected_idx;
 X_sel = X(:, selected_idx);
 
-% ä¿å­˜ç­›é€‰ä¿¡æ¯
 fs_dir = fullfile(project_root, 'Result', 'Feature_Select', tag_fs);
 if ~exist(fs_dir, 'dir'), mkdir(fs_dir); end
-save(fullfile(fs_dir, 'feature_select_result.mat'), 'selected_idx', 'score_abs', 'fs_method', 'top_k');
+save(fullfile(fs_dir, 'feature_select_result.mat'), 'fs_result');
 
 fig_fs = figure(101);
-plot(score_abs, 'LineWidth', 1.2); hold on;
-scatter(selected_idx, score_abs(selected_idx), 12, 'r', 'filled');
-title(sprintf('Feature Selection (%s) - %s', fs_method, property_name));
-xlabel('Feature Index'); ylabel('|corr(x_j, y)|');
+plot(fs_result.score, 'LineWidth', 1.2); hold on;
+scatter(selected_idx, fs_result.score(selected_idx), 12, 'r', 'filled');
+title(sprintf('Feature Selection (%s) - %s', upper(fs_method), property_name));
+xlabel('Feature Index'); ylabel('Feature Score');
 saveas(fig_fs, fullfile(fs_dir, 'feature_select_score.tif'), 'tiff');
 close(fig_fs);
 
-% 5) PLS å»ºæ¨¡ï¼ˆç­›é€‰åï¼‰
 [select, not_select] = KS(X_sel, round(sample_count * 0.75));
 Xtrain = X_sel(select, :); Ytrain = y(select, :);
 Xtest = X_sel(not_select, :); Ytest = y(not_select, :);
@@ -93,7 +84,7 @@ model_result = struct();
 model_result.property_name = property_name;
 model_result.preproc_mode = preproc_mode;
 model_result.fs_method = fs_method;
-model_result.top_k = top_k;
+model_result.fs_param = fs_param;
 model_result.selected_idx = selected_idx;
 model_result.R2_C = R2_C;
 model_result.R2_P = R2_P;
@@ -121,6 +112,8 @@ legend('Test Data', 'Train Data', 'Ideal Line', 'Location', 'NorthWest');
 saveas(fig_model, fullfile(model_dir, sprintf('FS_Results_R2_P=%.4f.tif', R2_P)), 'tiff');
 close(fig_model);
 
-fprintf('ç‰¹å¾ç­›é€‰+å»ºæ¨¡å®Œæˆ: å±æ€§=%s, æ–¹æ³•=%s, TopK=%d, R2P=%.4f\n', property_name, fs_method, top_k, R2_P);
-fprintf('æœ¬æ¬¡ç»“æœç›®å½•ï¼šResult\\Feature_Select\\%s  å’Œ  Result\\Model\\%s\\\n', tag_fs, tag_fs);
+fprintf('ÌØÕ÷É¸Ñ¡+½¨Ä£Íê³É: ÊôĞÔ=%s, ·½·¨=%s, ÌØÕ÷Êı=%d, R2P=%.4f\n', property_name, fs_method, numel(selected_idx), R2_P);
+fprintf('±¾´Î½á¹ûÄ¿Â¼£ºResult\\Feature_Select\\%s  ºÍ  Result\\Model\\%s\\\n', tag_fs, tag_fs);
 end
+
+

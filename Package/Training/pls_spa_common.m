@@ -26,7 +26,7 @@ if ~exist(result_folder, 'dir')
 end
 
 S = load(smooth_folder, 'Post_smooth_data');
-physical_data = xlsread(physical_data_folder);
+physical_data = readmatrix(physical_data_folder);
 if ~isfield(S, 'Post_smooth_data')
     error('平滑结果文件缺少变量 Post_smooth_data: %s', smooth_folder);
 end

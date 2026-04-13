@@ -1,15 +1,13 @@
-clc;clear;close all;
-cd('E:\study\algriothm\matlab\Data processing');
+clc; clear; close all;
 clear functions;
 
-% 1) 查看 all_csv_data.csv 可用属性列
-run_property_prediction('list');
+% 一键运行参数
+msc_ref_mode = 'first';      % 可选: 'mean' / 'median' / 'first'
+snv_mode = 'robust';         % 可选: 'standard' / 'robust'
 
-% 2) 普通建模示例：预测 a*，方法 SPA，预处理 SG+MSC+SNV
-run_property_prediction('a*','spa','sg+msc+snv',3,15);
-
-% % 3) 普通建模示例：预测 Mrix，方法 PCA，预处理 SG+MSC
-% run_property_prediction('Mrix','pca','sg+msc',3,15);
-
-% % 4) 特征筛选示例：预测 a*，启用特征筛选流程（corr_topk）
-% run_property_prediction('a*','fs','sg+msc+snv',3,15);
+% 一键运行：
+% 1) 分组1：SG+MSC+SNV
+% 2) 分组2：SG+MSC+SNV + CARS筛选
+% 3) 比较回归器：PLS / PCR / SVR / RF
+% 4) 完整跑完后统一保存报告
+summary = compare_a_prediction_pipeline(msc_ref_mode, snv_mode);
