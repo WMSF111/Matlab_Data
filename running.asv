@@ -1,0 +1,23 @@
+clc; clear; close all;
+clear functions;
+
+% 一键运行：
+% compare_property_prediction_pipeline(预测对象, 滤波方式, 特征选择方式)
+% 例如：
+%   compare_property_prediction_pipeline('a*', 'sg+msc+snv', 'cars')
+% 若后两个参数不写，则默认使用：'sg+msc+snv' 和 'cars'
+% summary = compare_property_prediction_pipeline('C*','sg+msc+snv','cars');
+% summary = compare_property_prediction_pipeline('b*','sg+msc+snv','cars');
+% 
+% summary = compare_property_prediction_pipeline('a*','sg+msc+snv','cars');
+% summary = compare_property_prediction_pipeline('ho','sg+msc+snv','cars');
+% 
+% summary = compare_property_prediction_pipeline('L*','sg+msc+snv','cars' );
+
+summary = compare_property_prediction_pipeline('C*','sg+msc+snv','pca');
+summary = compare_property_prediction_pipeline('b*','sg+msc+snv','pca');
+
+summary = compare_property_prediction_pipeline('a*','sg+msc+snv','pca');
+summary = compare_property_prediction_pipeline('ho','sg+msc+snv','pca');
+
+summary = compare_property_prediction_pipeline('L*','sg+msc+snv','pca' );

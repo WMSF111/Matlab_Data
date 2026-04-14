@@ -5,9 +5,8 @@ function model_result = train_model_from_dataset(dataset_mat_path, method_name, 
 %   'pcr' - 主成分回归
 %   'svr' - 支持向量回归
 %   'rf'  - 随机森林回归
-%
-% 兼容旧入口：
-%   'spa' / 'cars' / 'pca' / 'rfe'
+%   'gpr' - 高斯过程回归
+%   'knn' - 自定义K近邻回归
 
 if nargin < 1 || isempty(dataset_mat_path)
     error('请提供 dataset.mat 路径。');
@@ -40,7 +39,13 @@ ks_count = max(2, round(sample_count * 0.75));
 method = lower(strtrim(method_name));
 display_name = get_model_display_name(method);
 dataset_tag = dataset.metadata.dataset_tag;
-result_dir = fullfile(project_root, 'Result', 'Model', 'DatasetTrain', dataset_tag, upper(method));
+safe_dataset_tag = strrep(dataset_tag, '\', '_');
+run_tag = getenv('HXR_RUN_TAG');
+if isempty(run_tag)
+    result_dir = fullfile(project_root, 'Result', 'Model', upper(method), safe_dataset_tag);
+else
+    result_dir = fullfile(project_root, 'Result', 'Model', ['Run_' run_tag], upper(method), safe_dataset_tag);
+end
 if ~exist(result_dir, 'dir')
     mkdir(result_dir);
 end
@@ -79,9 +84,8 @@ switch method
             Ypred_train = [ones(size(score_train, 1), 1), score_train] * beta;
             Ypred = [ones(size(score_test, 1), 1), score_test] * beta;
             tmp = build_result_struct(method, k, 1:k, select, score_train, Ytrain, score_test, Ytest, Ypred_train, Ypred, []);
-            tmp.PCRK = k;
             tmp.best_param_detail = sprintf('主成分数k=%d', k);
-            if tmp.R2_P > max_R2_P
+            if ~isfield(model_result, 'R2_P') || is_better_result(tmp, model_result)
                 max_R2_P = tmp.R2_P;
                 model_result = tmp;
                 fprintf('PCR 当前最优更新: k=%d, R2P=%.4f, RMSEP=%.4f\n', k, tmp.R2_P, tmp.RMSEP);
@@ -108,11 +112,8 @@ switch method
             Ypred_train = predict(mdl, Xtrain);
             Ypred = predict(mdl, Xtest);
             tmp = build_result_struct(method, NaN, [], select, Xtrain, Ytrain, Xtest, Ytest, Ypred_train, Ypred, []);
-            tmp.SVRKernel = cfg.kernel;
-            tmp.SVRBox = cfg.box;
-            tmp.SVRScale = cfg.scale;
             tmp.best_param_detail = sprintf('核函数=%s, BoxConstraint=%g, KernelScale=%s', cfg.kernel, cfg.box, scale_to_text(cfg.scale));
-            if tmp.R2_P > max_R2_P
+            if ~isfield(model_result, 'R2_P') || is_better_result(tmp, model_result)
                 max_R2_P = tmp.R2_P;
                 model_result = tmp;
                 fprintf('SVR 当前最优更新: %s, R2P=%.4f, RMSEP=%.4f\n', tmp.best_param_detail, tmp.R2_P, tmp.RMSEP);
@@ -141,125 +142,58 @@ switch method
             if iscell(Ypred_train), Ypred_train = str2double(Ypred_train); end
             if iscell(Ypred), Ypred = str2double(Ypred); end
             tmp = build_result_struct(method, NaN, [], select, Xtrain, Ytrain, Xtest, Ytest, Ypred_train(:), Ypred(:), []);
-            tmp.RFNumTrees = cfg.num_trees;
-            tmp.RFMinLeaf = cfg.min_leaf;
             tmp.best_param_detail = sprintf('树数=%d, 最小叶子节点=%d', cfg.num_trees, cfg.min_leaf);
-            if tmp.R2_P > max_R2_P
+            if ~isfield(model_result, 'R2_P') || is_better_result(tmp, model_result)
                 max_R2_P = tmp.R2_P;
                 model_result = tmp;
                 fprintf('RF 当前最优更新: %s, R2P=%.4f, RMSEP=%.4f\n', tmp.best_param_detail, tmp.R2_P, tmp.RMSEP);
             end
         end
 
-    case 'spa'
-        k_range = [1, min(size(Xtrain, 2), 20)];
-        if ~isempty(method_param)
-            if numel(method_param) == 1
-                k_range = [1, min(size(Xtrain, 2), round(method_param))];
-            else
-                k_range = [max(1, round(method_param(1))), min(size(Xtrain, 2), round(method_param(2)))];
-            end
-        end
+    case 'gpr'
+        grid = build_gpr_grid(method_param);
         max_R2_P = -inf;
         model_result = struct();
-        total_iter = size(Xtrain, 2) * (k_range(2) - k_range(1) + 1);
-        iter_id = 0;
-        fprintf('SPA-PLS 搜索开始: 起点特征=%d, k范围=%d~%d, 总组合=%d\n', size(Xtrain, 2), k_range(1), k_range(2), total_iter);
-        for s = 1:size(Xtrain, 2)
-            for k = k_range(1):k_range(2)
-                iter_id = iter_id + 1;
-                if mod(iter_id, 20) == 0 || iter_id == 1 || iter_id == total_iter
-                    fprintf('SPA-PLS 进度: %d/%d\n', iter_id, total_iter);
-                end
-                wave_select = SPA(Xtrain, s, k);
-                Xtrain_use = Xtrain(:, wave_select);
-                Xtest_use = Xtest(:, wave_select);
-                CV = plscv(Xtrain_use, Ytrain, 256, 10, 'center');
-                A = CV.optLV;
-                PLS = pls(Xtrain_use, Ytrain, A, 'center');
-                Ypred = plsval(PLS, Xtest_use, Ytest);
-                Ypred_train = plsval(PLS, Xtrain_use, Ytrain);
-                tmp = build_result_struct(method, A, wave_select, select, Xtrain_use, Ytrain, Xtest_use, Ytest, Ypred_train, Ypred, CV);
-                tmp.SPAS = s;
-                tmp.SPAK = k;
-                tmp.best_param_detail = sprintf('起始特征s=%d, 特征数k=%d, PLS潜变量A=%d', s, k, A);
-                if tmp.R2_P > max_R2_P
-                    max_R2_P = tmp.R2_P;
-                    model_result = tmp;
-                    fprintf('SPA-PLS 当前最优更新: s=%d, k=%d, A=%d, R2P=%.4f, RMSEP=%.4f\n', s, k, A, tmp.R2_P, tmp.RMSEP);
-                end
+        fprintf('GPR 搜索开始: 总组合=%d\n', numel(grid));
+        for i = 1:numel(grid)
+            cfg = grid(i);
+            fprintf('GPR 进度: %d/%d | 核函数=%s\n', i, numel(grid), cfg.kernel);
+            try
+                mdl = fitrgp(Xtrain, Ytrain, ...
+                    'KernelFunction', cfg.kernel, ...
+                    'Standardize', true);
+            catch ME
+                error('GPR 训练失败，请确认已安装 Statistics and Machine Learning Toolbox。原始错误: %s', ME.message);
             end
-        end
-
-    case 'cars'
-        num_sampling_runs = 30;
-        if ~isempty(method_param)
-            num_sampling_runs = max(1, round(method_param));
-        end
-        fprintf('CARS-PLS 开始: CARS采样次数=%d\n', num_sampling_runs);
-        CV0 = plscv(Xtrain, Ytrain, 256, 10, 'center');
-        A0 = CV0.optLV;
-        CARS = carspls(Xtrain, Ytrain, A0, 10, 'center', num_sampling_runs, 0, 1);
-        selected_idx = CARS.vsel;
-        Xtrain_use = Xtrain(:, selected_idx);
-        Xtest_use = Xtest(:, selected_idx);
-        CV = plscv(Xtrain_use, Ytrain, 256, 10, 'center');
-        A = CV.optLV;
-        PLS = pls(Xtrain_use, Ytrain, A, 'center');
-        Ypred = plsval(PLS, Xtest_use, Ytest);
-        Ypred_train = plsval(PLS, Xtrain_use, Ytrain);
-        model_result = build_result_struct(method, A, selected_idx, select, Xtrain_use, Ytrain, Xtest_use, Ytest, Ypred_train, Ypred, CV);
-        model_result.CARS = CARS;
-        model_result.best_param_detail = sprintf('CARS采样次数=%d, 选中特征数=%d, PLS潜变量A=%d', num_sampling_runs, numel(selected_idx), A);
-
-    case 'pca'
-        [coeff, ~, ~, ~, ~, ~] = pca(Xtrain);
-        max_R2_P = -inf;
-        model_result = struct();
-        total_iter = min(200, size(coeff, 2));
-        fprintf('PCA-PLS 搜索开始: 主成分数量范围=1~%d\n', total_iter);
-        for k = 1:total_iter
-            if mod(k, 20) == 0 || k == 1 || k == total_iter
-                fprintf('PCA-PLS 进度: %d/%d\n', k, total_iter);
-            end
-            Xtrain_use = Xtrain * coeff(:, 1:k);
-            Xtest_use = Xtest * coeff(:, 1:k);
-            CV = plscv(Xtrain_use, Ytrain, 256, 10, 'center');
-            A = CV.optLV;
-            PLS = pls(Xtrain_use, Ytrain, A, 'center');
-            Ypred = plsval(PLS, Xtest_use, Ytest);
-            Ypred_train = plsval(PLS, Xtrain_use, Ytrain);
-            tmp = build_result_struct(method, A, 1:k, select, Xtrain_use, Ytrain, Xtest_use, Ytest, Ypred_train, Ypred, CV);
-            tmp.PCAK = k;
-            tmp.best_param_detail = sprintf('主成分数k=%d, PLS潜变量A=%d', k, A);
-            if tmp.R2_P > max_R2_P
+            Ypred_train = predict(mdl, Xtrain);
+            Ypred = predict(mdl, Xtest);
+            tmp = build_result_struct(method, NaN, [], select, Xtrain, Ytrain, Xtest, Ytest, Ypred_train, Ypred, []);
+            tmp.best_param_detail = sprintf('核函数=%s', cfg.kernel);
+            if ~isfield(model_result, 'R2_P') || is_better_result(tmp, model_result)
                 max_R2_P = tmp.R2_P;
                 model_result = tmp;
-                fprintf('PCA-PLS 当前最优更新: k=%d, A=%d, R2P=%.4f, RMSEP=%.4f\n', k, A, tmp.R2_P, tmp.RMSEP);
+                fprintf('GPR 当前最优更新: %s, R2P=%.4f, RMSEP=%.4f\n', tmp.best_param_detail, tmp.R2_P, tmp.RMSEP);
             end
         end
 
-    case 'rfe'
-        nfeatures = min(40, size(Xtrain, 2));
-        if ~isempty(method_param)
-            nfeatures = min(size(Xtrain, 2), max(1, round(method_param)));
+    case 'knn'
+        grid = build_knn_grid(method_param);
+        max_R2_P = -inf;
+        model_result = struct();
+        fprintf('KNN 搜索开始: 总组合=%d\n', numel(grid));
+        for i = 1:numel(grid)
+            cfg = grid(i);
+            fprintf('KNN 进度: %d/%d | 邻居数=%d | 距离=%s | 加权=%s\n', i, numel(grid), cfg.k, cfg.distance, cfg.weighting);
+            Ypred_train = local_knn_predict(Xtrain, Ytrain, Xtrain, cfg.k, cfg.distance, cfg.weighting, true);
+            Ypred = local_knn_predict(Xtrain, Ytrain, Xtest, cfg.k, cfg.distance, cfg.weighting, false);
+            tmp = build_result_struct(method, NaN, [], select, Xtrain, Ytrain, Xtest, Ytest, Ypred_train, Ypred, []);
+            tmp.best_param_detail = sprintf('邻居数=%d, 距离=%s, 加权=%s', cfg.k, cfg.distance, cfg.weighting);
+            if ~isfield(model_result, 'R2_P') || is_better_result(tmp, model_result)
+                max_R2_P = tmp.R2_P;
+                model_result = tmp;
+                fprintf('KNN 当前最优更新: %s, R2P=%.4f, RMSEP=%.4f\n', tmp.best_param_detail, tmp.R2_P, tmp.RMSEP);
+            end
         end
-        fprintf('RFE-PLS 开始: 保留特征数=%d\n', nfeatures);
-        fun = @(XTrain, YTrain, XTest, YTest) ...
-            sqrt(sum((YTest - plsval(pls(XTrain, YTrain, size(XTrain, 2), 'center'), XTest, YTest)).^2) / size(XTest, 1));
-        opts = statset('Display', 'iter', 'UseParallel', false);
-        [selectedFeatures, ~] = sequentialfs(fun, Xtrain, Ytrain, ...
-            'cv', 10, 'direction', 'forward', 'options', opts, 'nfeatures', nfeatures);
-        selected_idx = find(selectedFeatures);
-        Xtrain_use = Xtrain(:, selected_idx);
-        Xtest_use = Xtest(:, selected_idx);
-        CV = plscv(Xtrain_use, Ytrain, 256, 10, 'center');
-        A = CV.optLV;
-        PLS = pls(Xtrain_use, Ytrain, A, 'center');
-        Ypred = plsval(PLS, Xtest_use, Ytest);
-        Ypred_train = plsval(PLS, Xtrain_use, Ytrain);
-        model_result = build_result_struct(method, A, selected_idx, select, Xtrain_use, Ytrain, Xtest_use, Ytest, Ypred_train, Ypred, CV);
-        model_result.best_param_detail = sprintf('RFE保留特征数=%d, 实际选中特征数=%d, PLS潜变量A=%d', nfeatures, numel(selected_idx), A);
 
     otherwise
         error('Unsupported method_name: %s.', method_name);
@@ -271,7 +205,9 @@ model_result.dataset_metadata = dataset.metadata;
 model_result.method_name = method;
 model_result.model_display_name = display_name;
 
-result_mat = fullfile(result_dir, sprintf('Results_R2_P=%.4f.mat', model_result.R2_P));
+result_stub = sprintf('%s_R2P_%.4f', safe_dataset_tag, model_result.R2_P);
+result_mat = fullfile(result_dir, [result_stub '.mat']);
+plot_path = fullfile(result_dir, [result_stub '.tif']);
 save(result_mat, 'model_result');
 
 fig = figure(301);
@@ -283,19 +219,76 @@ hold off;
 xlabel('Actual Values'); ylabel('Predicted Values');
 title(sprintf('%s | R2C=%.3f, R2P=%.3f, RMSEP=%.3f', display_name, model_result.R2_C, model_result.R2_P, model_result.RMSEP));
 legend('Test Data', 'Train Data', 'Ideal Line', 'Location', 'NorthWest');
-saveas(fig, fullfile(result_dir, sprintf('Results_R2_P=%.4f.tif', model_result.R2_P)), 'tiff');
+saveas(fig, plot_path, 'tiff');
 close(fig);
+
+model_result.result_mat_path = result_mat;
+model_result.regression_plot_path = plot_path;
 
 fprintf('训练完成: 模型=%s, R2P=%.4f, RMSEP=%.4f\n', display_name, model_result.R2_P, model_result.RMSEP);
 fprintf('最优参数: %s\n', model_result.best_param_detail);
 fprintf('模型结果目录：%s\n', result_dir);
 end
 
+function ypred = local_knn_predict(Xtrain, Ytrain, Xquery, k, distance_name, weighting, exclude_self)
+[idx, dist] = knnsearch(Xtrain, Xquery, 'K', min(k + double(exclude_self), size(Xtrain, 1)), 'Distance', distance_name);
+if exclude_self
+    idx = idx(:, 2:end);
+    dist = dist(:, 2:end);
+elseif size(idx, 2) > k
+    idx = idx(:, 1:k);
+    dist = dist(:, 1:k);
+end
+if size(idx, 2) > k
+    idx = idx(:, 1:k);
+    dist = dist(:, 1:k);
+end
+neighbor_y = Ytrain(idx);
+if strcmpi(weighting, 'inverse')
+    w = 1 ./ max(dist, 1e-12);
+    ypred = sum(neighbor_y .* w, 2) ./ sum(w, 2);
+else
+    ypred = mean(neighbor_y, 2);
+end
+ypred = ypred(:);
+end
+
 function result = build_result_struct(method_name, A, selected_info, select_idx, Xtrain, Ytrain, Xtest, Ytest, Ypred_train, Ypred, CV)
-SST_train = sum((Ytrain - mean(Ytrain)).^2);
-SSE_train = sum((Ytrain - Ypred_train).^2);
-SST_test = sum((Ytest - mean(Ytest)).^2);
-SSE_test = sum((Ytest - Ypred).^2);
+Ytrain = double(Ytrain(:));
+Ytest = double(Ytest(:));
+Ypred_train = double(Ypred_train(:));
+Ypred = double(Ypred(:));
+
+valid_train = isfinite(Ytrain) & isfinite(Ypred_train);
+valid_test = isfinite(Ytest) & isfinite(Ypred);
+
+SST_train = NaN; SSE_train = NaN; R2_C = NaN; RMSEC = NaN;
+SST_test = NaN; SSE_test = NaN; R2_P = NaN; RMSEP = NaN; RPD = NaN;
+
+if nnz(valid_train) >= 2
+    ytr = Ytrain(valid_train);
+    yptr = Ypred_train(valid_train);
+    SST_train = sum((ytr - mean(ytr)).^2);
+    SSE_train = sum((ytr - yptr).^2);
+    RMSEC = sqrt(SSE_train / numel(ytr));
+    if SST_train > eps
+        R2_C = 1 - SSE_train / SST_train;
+    end
+end
+
+if nnz(valid_test) >= 2
+    yte = Ytest(valid_test);
+    ypte = Ypred(valid_test);
+    SST_test = sum((yte - mean(yte)).^2);
+    SSE_test = sum((yte - ypte).^2);
+    RMSEP = sqrt(SSE_test / numel(yte));
+    if SST_test > eps
+        R2_P = 1 - SSE_test / SST_test;
+    end
+    if isfinite(RMSEP) && RMSEP > 0
+        RPD = std(yte) / RMSEP;
+    end
+end
 
 result = struct();
 result.method_name = method_name;
@@ -308,10 +301,10 @@ result.Xtest2 = Xtest;
 result.ytest2 = Ytest;
 result.ypred2_train = Ypred_train;
 result.ypred2 = Ypred;
-result.R2_C = 1 - SSE_train / SST_train;
-result.R2_P = 1 - SSE_test / SST_test;
-result.RMSEC = sqrt(SSE_train / size(Xtrain, 1));
-result.RMSEP = sqrt(SSE_test / size(Xtest, 1));
+result.R2_C = R2_C;
+result.R2_P = R2_P;
+result.RMSEC = RMSEC;
+result.RMSEP = RMSEP;
 if isempty(CV)
     result.RMSECV = NaN;
     result.Q2_Max = NaN;
@@ -319,8 +312,9 @@ else
     result.RMSECV = CV.RMSECV_min;
     result.Q2_Max = CV.Q2_max;
 end
-result.RPD = std(Ytest) / result.RMSEP;
+result.RPD = RPD;
 end
+
 
 function grid = build_svr_grid(method_param)
 kernels = {'linear', 'gaussian'};
@@ -360,6 +354,63 @@ for i = 1:numel(num_trees_list)
 end
 end
 
+function grid = build_gpr_grid(method_param)
+kernels = {'squaredexponential', 'ardsquaredexponential'};
+if ischar(method_param) && strcmpi(method_param, 'fast')
+    kernels = {'squaredexponential'};
+elseif iscell(method_param) && ~isempty(method_param)
+    kernels = method_param;
+end
+for i = 1:numel(kernels)
+    grid(i).kernel = kernels{i}; %#ok<AGROW>
+end
+end
+
+function grid = build_knn_grid(method_param)
+ks = [3, 5, 7, 9];
+distances = {'euclidean', 'cityblock'};
+weightings = {'uniform', 'inverse'};
+if isnumeric(method_param) && ~isempty(method_param)
+    ks = unique(max(1, round(method_param(:)')));
+elseif ischar(method_param) && strcmpi(method_param, 'fast')
+    ks = [3, 5, 7];
+    distances = {'euclidean'};
+    weightings = {'uniform', 'inverse'};
+end
+idx = 0;
+for i = 1:numel(ks)
+    for j = 1:numel(distances)
+        for k = 1:numel(weightings)
+            idx = idx + 1;
+            grid(idx).k = ks(i); %#ok<AGROW>
+            grid(idx).distance = distances{j}; %#ok<AGROW>
+            grid(idx).weighting = weightings{k}; %#ok<AGROW>
+        end
+    end
+end
+end
+
+function tf = is_better_result(candidate, current_best)
+if ~isfield(current_best, 'R2_P') || isempty(current_best.R2_P)
+    tf = true;
+    return;
+end
+if isnan(current_best.R2_P) && ~isnan(candidate.R2_P)
+    tf = true;
+    return;
+end
+if isnan(candidate.R2_P)
+    tf = false;
+    return;
+end
+if candidate.R2_P > current_best.R2_P
+    tf = true;
+elseif candidate.R2_P < current_best.R2_P
+    tf = false;
+else
+    tf = candidate.RMSEP < current_best.RMSEP;
+end
+end
 function txt = scale_to_text(scale)
 if ischar(scale)
     txt = scale;
@@ -375,6 +426,8 @@ elseif isnumeric(param)
     txt = mat2str(param);
 elseif ischar(param)
     txt = param;
+elseif iscell(param)
+    txt = 'cell';
 else
     txt = 'custom';
 end
@@ -390,17 +443,12 @@ switch lower(method)
         name = 'SVR';
     case 'rf'
         name = 'RF';
-    case 'spa'
-        name = 'SPA-PLS';
-    case 'cars'
-        name = 'CARS-PLS';
-    case 'pca'
-        name = 'PCA-PLS';
-    case 'rfe'
-        name = 'RFE-PLS';
+    case 'gpr'
+        name = 'GPR';
+    case 'knn'
+        name = 'KNN';
     otherwise
         name = upper(method);
 end
 end
-
 
