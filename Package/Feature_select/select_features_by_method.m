@@ -84,13 +84,33 @@ switch method
         fs_result.info.n_pc = n_pc;
         fs_result.info.latent = latent;
         fs_result.info.explained = explained;
+        fs_result.info.coeff = coeff;
+        fs_result.info.pc_weights = pc_weights;
+        fs_result.info.pca_score = score;
 
     case 'cars'
-        num_sampling_runs = normalize_param(fs_param, inf, 30);
+        num_sampling_runs = 30;
+        target_count = [];
+        if isstruct(fs_param)
+            if isfield(fs_param, 'num_sampling_runs') && ~isempty(fs_param.num_sampling_runs)
+                num_sampling_runs = normalize_param(fs_param.num_sampling_runs, inf, 30);
+            end
+            if isfield(fs_param, 'target_count') && ~isempty(fs_param.target_count)
+                target_count = normalize_param(fs_param.target_count, n_features, min(5, n_features));
+            end
+        else
+            num_sampling_runs = normalize_param(fs_param, inf, 30);
+        end
         CV = plscv(X, y, 256, 10, 'center');
         A = CV.optLV;
-        CARS = carspls(X, y, A, 10, 'center', num_sampling_runs, 0, 1);
+        CARS = carspls(X, y, A, 10, 'center', num_sampling_runs, 0, 0);
         selected_idx = CARS.vsel(:)';
+        if ~isempty(target_count) && numel(selected_idx) > target_count
+            corr_score = abs(corr(X, y, 'rows', 'pairwise'));
+            corr_score(~isfinite(corr_score)) = 0;
+            [~, order_local] = sort(corr_score(selected_idx), 'descend');
+            selected_idx = selected_idx(order_local(1:target_count));
+        end
 
         score = zeros(1, n_features);
         score(selected_idx) = 1;
@@ -99,6 +119,7 @@ switch method
         fs_result.score = score;
         fs_result.info.A = A;
         fs_result.info.num_sampling_runs = num_sampling_runs;
+        fs_result.info.target_count = target_count;
         fs_result.info.CARS = CARS;
 
     case 'spa'
