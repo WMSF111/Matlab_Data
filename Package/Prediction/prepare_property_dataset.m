@@ -19,7 +19,7 @@ if nargin < 11 || isempty(baseline_zero_mode), baseline_zero_mode = 'none'; end
 if nargin < 12 || isempty(despike_mode), despike_mode = 'none'; end
 if nargin < 13 || isempty(baseline_zero_scope), baseline_zero_scope = 'cropped_spectrum'; end
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(genpath(project_root));
 
 black_dir = fullfile(project_root, 'data', 'Black white');

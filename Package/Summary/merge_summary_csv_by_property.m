@@ -8,7 +8,7 @@ if nargin < 1 || isempty(property_name)
     error('请提供预测对象，例如：''C*''、''a*''。');
 end
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 summary_root = fullfile(project_root, 'Result', 'Summary');
 property_tag = property_to_tag(property_name);
 pattern = [property_tag '_regressor_compare_*'];

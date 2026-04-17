@@ -31,7 +31,7 @@ if size(X, 1) ~= numel(y)
     error('数据集 X 与 y 的样本数不一致。');
 end
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(genpath(project_root));
 
 sample_count = size(X, 1);

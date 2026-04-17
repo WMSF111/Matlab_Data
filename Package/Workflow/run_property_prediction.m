@@ -70,7 +70,7 @@ if numel(varargin) >= 2
     fs_param = varargin{2};
 end
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(genpath(project_root));
 
 if strcmpi(property_name, 'list')

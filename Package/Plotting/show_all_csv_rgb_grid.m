@@ -3,10 +3,10 @@ function result = show_all_csv_rgb_grid(csv_path, save_path)
 % 鼠标移动到颜色块上时，会显示对应 csv_name、L*a*b* 和 RGB
 
 if nargin < 1 || isempty(csv_path)
-    csv_path = fullfile(fileparts(mfilename('fullpath')), 'data', 'physical', 'all_csv_data.csv');
+    csv_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), 'data', 'physical', 'all_csv_data.csv');
 end
 if nargin < 2 || isempty(save_path)
-    save_dir = fullfile(fileparts(mfilename('fullpath')), 'Result', 'Summary');
+    save_dir = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), 'Result', 'Summary');
     if ~exist(save_dir, 'dir')
         mkdir(save_dir);
     end

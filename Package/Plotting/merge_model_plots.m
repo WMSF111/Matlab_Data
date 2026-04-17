@@ -11,7 +11,7 @@ if nargin < 2 || isempty(model_name)
     error('请提供回归器名称，例如：GPR。');
 end
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 if contains(run_name_or_dir, ':') || startsWith(run_name_or_dir, filesep)
     run_dir = run_name_or_dir;
 else

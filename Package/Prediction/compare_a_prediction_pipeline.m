@@ -12,7 +12,7 @@ if nargin < 2 || isempty(snv_mode), snv_mode = 'standard'; end
 clc;
 close all;
 
-project_root = fileparts(mfilename('fullpath'));
+project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(genpath(project_root));
 
 property_name = 'a*';
