@@ -1,0 +1,23 @@
+diff a/running.m b/running.m	(rejected hunks)
+@@ -2,13 +2,21 @@
+ clc; clear; close all;
+ clear functions;
+ 
++<<<<<<< HEAD
+ % 预测目标、预处理方式和候选特征方法。
+ property_name = 'a*';
+ filter_method = 'sg+msc+snv';
++=======
++% % SG ˫��������������
++property_name = 'b*';
++filter_method = 'sg';
++% feature_selection_method = {'cars','pca', 'corr_topk', 'spa'};
++>>>>>>> 0fd25be70eaf50925efbfe6595a462e2598d334e
+ feature_selection_method = {'cars'};
+ sg_orders = [3];
+ sg_windows = [5];
+ 
++<<<<<<< HEAD
+ % 先读取默认开关，再覆盖成一套偏稳健、抗过拟合的推荐配置。
+ generalization_options = default_generalization_options();
+ % 统一降维上限：

@@ -66,8 +66,8 @@ feature_selection_param_grid.corr_topk = {80, 120, 160, 200};
 feature_selection_param_grid.spa = {80, 120, 160, 200};
 
 % 回归器候选集合：统一在这里管理参与比较的模型。
-regressors = {'pls', 'pcr', 'svr', 'rf', 'gpr', 'knn', 'xgboost', 'cnn'};
-% regressors = {'xgboost', 'cnn'};
+% regressors = {'pls', 'pcr', 'svr', 'rf', 'gpr', 'knn', 'xgboost', 'cnn'};
+regressors = {'xgboost'};
 regressor_params = struct();
 regressor_params.pls = {struct('max_lv', 300, 'cv_fold', 10)};
 regressor_params.pcr = {struct('max_pc', 300)};
