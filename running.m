@@ -1,46 +1,39 @@
 clc; clear; close all;
 clear functions;
-project_root = fileparts(mfilename('fullpath'));
-lang_mode = 'zh';
-normalize_mode = 'none';
-addpath(genpath(fullfile(project_root, 'Package')));
 
-e_nose_data_root = fullfile(project_root, 'data', 'E_nose');
-e_nose_feature_modes = {'med','mode'};
-e_nose_use_baseline_removed = false;
+% % SG 双参数网格测试入口
+property_name = 'b*';
+filter_method = 'sg';
+% feature_selection_method = {'cars','pca', 'corr_topk', 'spa'};
+feature_selection_method = {'cars'};
+sg_orders = [3];
+sg_windows = [5];
 
-% result70 = predict_property_time_series(70, [], [], lang_mode, normalize_mode);
-% result80 = predict_property_time_series(80, [], [], lang_mode, normalize_mode);
-% result90 = predict_property_time_series(90, [], [], lang_mode, normalize_mode);
-% result_compare = compare_temperature_time_series([70 80 90], 0:20, [], lang_mode, normalize_mode);
-% 
-% r70 = plot_e_nose_time_series(70, e_nose_feature_modes, e_nose_data_root, lang_mode, normalize_mode, e_nose_use_baseline_removed);
-% r80 = plot_e_nose_time_series(80, e_nose_feature_modes, e_nose_data_root, lang_mode, normalize_mode, e_nose_use_baseline_removed);
-% r90 = plot_e_nose_time_series(90, e_nose_feature_modes, e_nose_data_root, lang_mode, normalize_mode, e_nose_use_baseline_removed);
-rc  = compare_e_nose_time_series([70 80 90], e_nose_feature_modes, e_nose_data_root, lang_mode, normalize_mode, e_nose_use_baseline_removed);
 
-% PATH = 'D:\HXR\Matlab\data\E_nose\90\2\奇数\15.csv';
-% % 读取 CSV 文件
-% data = readtable(PATH);
-% 
-% % 对 MQ138 列加 100
-% data.MQ135 = data.MQ135 - 100;
-% data.TGS2612 = data.TGS2612 - 100;
-% 
-% % 保存为 CSV 文件
-% writetable(data, PATH);
-% % % 读取 CSV 文件
-% data = readtable(PATH);
-% 
-% % 获取所有列名
-% vars = data.Properties.VariableNames;
-% 
-% % 对每一列数据加 100（假设都是数值列）
-% for i = 1:length(vars)
-%     if isnumeric(data.(vars{i}))
-%         data.(vars{i}) = data.(vars{i}) + 100;
-%     end
-% end
-% 
-% % 保存为新的 CSV 文件
-% writetable(data, PATH);
+for i = 1:numel(sg_orders)
+    current_order = sg_orders(i);
+    for j = 1:numel(sg_windows)
+        current_window = sg_windows(j);
+
+        % SG 窗口必须为奇数，且通常应大于阶数
+        if mod(current_window, 2) == 0
+            continue;
+        end
+        if current_window <= current_order
+            continue;
+        end
+
+        fprintf('\n================ SG 参数网格测试开始 ================\n');
+        % fprintf('预测对象：%s | 滤波方式：%s | 特征筛选：%s | SG阶数=%d | SG窗口=%d\n', ...
+        %     property_name, filter_method, feature_selection_method, current_order, current_window);
+
+        summary = compare_property_prediction_pipeline(property_name, filter_method, feature_selection_method, current_order, current_window); 
+    end
+end
+
+
+merge_summary_csv_by_property('brix');
+
+
+% % 运行结束后，显示并保存 all_csv_data.csv 的 RGB 总图
+% show_all_csv_rgb_grid;
