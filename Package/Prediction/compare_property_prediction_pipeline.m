@@ -1,15 +1,8 @@
-function summary = compare_property_prediction_pipeline(property_name, filter_method, feature_selection_method, sg_order, sg_window, include_preprocessed_group)
-% ¹¦ÄÜ£º±È½ÏÁ½×éÊı¾İÔÚ²»Í¬»Ø¹éÆ÷ÏÂµÄÔ¤²âĞ§¹û
-% µÚ 1 ×é£º½ö×öÂË²¨/Ô¤´¦Àí
-% µÚ 2 ×é£ºÏÈÂË²¨/Ô¤´¦Àí£¬ÔÙ½øĞĞÌØÕ÷É¸Ñ¡
-% ÓÃ·¨Ê¾Àı£º
-%   summary = compare_property_prediction_pipeline('a*')
-%   summary = compare_property_prediction_pipeline('a*', 'sg+msc+snv', 'cars')
-%   summary = compare_property_prediction_pipeline('L*', 'sg+msc+snv', 'spa', 2, 15)
-%   summary = compare_property_prediction_pipeline('L*', 'sg+msc+snv', 'spa', 2, 15, false)
+function summary = compare_property_prediction_pipeline(property_name, filter_method, feature_selection_method, sg_order, sg_window, include_preprocessed_group, generalization_options)
+% Compare property prediction performance with optional generalization controls.
 
 if nargin < 1 || isempty(property_name)
-    error('property_name ±ØÌî£¬ÀıÈç£º''a*'' »ò ''L*''¡£');
+    error('property_name is required.');
 end
 if nargin < 2 || isempty(filter_method)
     filter_method = 'sg+msc+snv';
@@ -23,90 +16,76 @@ end
 if nargin < 5 || isempty(sg_window)
     sg_window = 35;
 end
-% false´ú±í²»Ñ¡Ö»É¸Ñ¡Êı¾İ
 if nargin < 6 || isempty(include_preprocessed_group)
     include_preprocessed_group = false;
 end
+if nargin < 7 || isempty(generalization_options)
+    generalization_options = default_generalization_options();
+else
+    generalization_options = normalize_generalization_options(generalization_options);
+end
 
+% æ”¯æŒä¸€æ¬¡è¾“å…¥å¤šä¸ªç‰¹å¾æ–¹æ³•ï¼›è¿™é‡Œä¼šé€’å½’å±•å¼€åå†æ±‡æ€»ç»“æœã€‚
 if iscell(feature_selection_method) || (isstring(feature_selection_method) && numel(feature_selection_method) > 1)
     method_list = cellstr(feature_selection_method);
     summary_parts = cell(numel(method_list), 1);
     for ii = 1:numel(method_list)
-        summary_parts{ii} = compare_property_prediction_pipeline(property_name, filter_method, method_list{ii}, sg_order, sg_window, include_preprocessed_group);
+        summary_parts{ii} = compare_property_prediction_pipeline(property_name, filter_method, method_list{ii}, sg_order, sg_window, include_preprocessed_group, generalization_options);
     end
-    try
-        summary = vertcat(summary_parts{:});
-    catch
-        summary = summary_parts;
-    end
+    summary = vertcat(summary_parts{:});
     return;
 end
 
+% æ¸…ç†å‘½ä»¤çª—å£å’Œå›¾çª—ï¼Œé¿å…ä¸Šä¸€æ¬¡è¿è¡Œçš„å¯è§†åŒ–å¹²æ‰°æœ¬æ¬¡æ¯”è¾ƒã€‚
 clc;
 close all;
 
+% è‡ªåŠ¨å®šä½é¡¹ç›®æ ¹ç›®å½•å¹¶åŠ å…¥è·¯å¾„ï¼Œé¿å…æ‰‹åŠ¨ç»´æŠ¤ addpathã€‚
 project_root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
 addpath(genpath(project_root));
 
-% ==================== ²ÎÊıÇø£¨ÔÚÕâÀïÍ³Ò»ĞŞ¸Ä£© ====================
+% æœ€ç»ˆé¢„å¤„ç†é“¾åªç”± filter_method å†³å®šï¼Œä¸å†é€šè¿‡é¢å¤–å¼€å…³æ”¹å†™ã€‚
 preproc_mode = lower(strtrim(filter_method));
-fs_method = lower(strtrim(feature_selection_method));
+fs_method = lower(strtrim(char(feature_selection_method)));
+msc_ref_mode = 'mean';
+snv_mode = 'robust';
+keep_dataset_exports = false;
+baseline_zero_mode = 'first_5_mean';
+baseline_zero_scope = 'full_spectrum';
+despike_mode = 'jump_guard';
 
-sg_order = sg_order;         % SG ¶àÏîÊ½½×Êı
-sg_window = sg_window;       % SG ´°¿Ú³¤¶È
-msc_ref_mode = 'mean';       % MSC ²Î¿¼·½Ê½£ºmean / median / first
-snv_mode = 'robust';          % SNV Ä£Ê½£ºstandard / robust
-keep_dataset_exports = false; % false ±íÊ¾¹ı³ÌÊı¾İÖ»±£ÁôÁÙÊ± dataset.mat
-baseline_zero_mode = 'first_5_mean'; % ¿ÉÑ¡£º'none' / 'first_point' / 'first_5_mean' %»ùÏß´¦Àí
-baseline_zero_scope = 'full_spectrum'; % ¿ÉÑ¡£º'cropped_spectrum' / 'full_spectrum' %»ùÏß¹éÁã×÷ÓÃ·¶Î§
-despike_mode = 'jump_guard';   % ¿ÉÑ¡£º'none' / 'median3' / 'median5' / 'median7' / 'local' / 'local_strong' / 'jump_guard' %È¥¼â´Ì
-
-% »Ø¹éÆ÷ËÑË÷Ä£Ê½£º
-gpr_mode = 'fast';   % ¿ÉÑ¡£º'fast' / 'full'
-
+% ç‰¹å¾é€‰æ‹©å‚æ•°ç½‘æ ¼ï¼šè¿™é‡Œç»Ÿä¸€å®šä¹‰ä¸åŒæ–¹æ³•çš„å€™é€‰å‚æ•°ã€‚
 feature_selection_param_grid = struct();
-small_feature_mode = false;   % true Ê±²Å°ÑÌØÕ÷ÊıÑ¹µ½ 2~5£»½üºìÍâÄ¬ÈÏ½¨Òé false
-if small_feature_mode
-    feature_selection_param_grid.cars = {struct('num_sampling_runs', 20, 'target_count', 2), struct('num_sampling_runs', 20, 'target_count', 3), struct('num_sampling_runs', 20, 'target_count', 4), struct('num_sampling_runs', 20, 'target_count', 5)};
-    feature_selection_param_grid.pca = {2, 3, 4, 5};
-    feature_selection_param_grid.corr_topk = {2, 3, 4, 5};
-    feature_selection_param_grid.spa = {2, 3, 4, 5};
-else
-    feature_selection_param_grid.cars = {120,150}; % 20, 30, 40, 80
-    feature_selection_param_grid.pca = {40, 80, 120, 160, 200};
-    feature_selection_param_grid.corr_topk = {20, 40, 80, 120};
-    feature_selection_param_grid.spa = {8, 12, 16, 20};
-end
+% ç¬¬ä¸€é˜¶æ®µç‰¹å¾ç­›é€‰é»˜è®¤ä¿ç•™ 80~200 ä¸ªå€™é€‰ç‰¹å¾ï¼›
+% å¦‚æœå¼€å¯ post_feature_pca_projectionï¼Œåé¢è¿˜ä¼šå†å‹åˆ° shared_component_capã€‚
+% CARS ä¸­ num_sampling_runs å†³å®šé‡‡æ ·å¼ºåº¦ï¼Œtarget_count å†³å®šæœ€ç»ˆæœ€å¤šä¿ç•™å¤šå°‘ç»´ã€‚
+feature_selection_param_grid.cars = { ...
+    struct('num_sampling_runs', 60, 'target_count', 60)};
+feature_selection_param_grid.pca = {80, 120, 160, 200};
+feature_selection_param_grid.corr_topk = {80, 120, 160, 200};
+feature_selection_param_grid.spa = {80, 120, 160, 200};
 
-% regressors = {'pls', 'pcr', 'svr', 'rf', 'gpr', 'knn'}; 
-regressors = {'pls', 'pcr'}; % RF / GPR / KNN ²ÎÊıÍø¸ñÒ²¿ÉÔÚÕâÀïÖ±½ÓĞŞ¸Ä
+% å›å½’å™¨å€™é€‰é›†åˆï¼šç»Ÿä¸€åœ¨è¿™é‡Œç®¡ç†å‚ä¸æ¯”è¾ƒçš„æ¨¡å‹ã€‚
+regressors = {'pls', 'pcr', 'svr', 'rf', 'gpr', 'knn', 'xgboost', 'cnn'};
+% regressors = {'xgboost', 'cnn'};
 regressor_params = struct();
-% ¾ÉÄ¬ÈÏ PLS ²ÎÊı£ºmax_lv=256, cv_fold=10
 regressor_params.pls = {struct('max_lv', 300, 'cv_fold', 10)};
-% ¾ÉÄ¬ÈÏ PCR ²ÎÊı£ºmax_pc=200
 regressor_params.pcr = {struct('max_pc', 300)};
-% ¾ÉÄ¬ÈÏ SVR ²ÎÊı£º'fast' -> kernels={'linear','gaussian'}, boxes=[1 10], scales={'auto'}
-regressor_params.svr = {struct('kernels', {{'linear', 'gaussian'}}, 'boxes', [0.1 0.5 1 5], 'scales', {{'auto', 0.5, 1, 2, 5, 10}})};
-% ¾ÉÄ¬ÈÏ RF ²ÎÊı£ºnum_trees=[100 200], min_leaf=[1 5 10]
-regressor_params.rf = {struct( 'num_trees', [100 200], 'min_leaf', [1 5 10 20 30])};
-% GPR ²ÎÊıÄ£Ê½£ºfast ¸ü¿ì£¬full ¸üÈ«
-switch lower(strtrim(gpr_mode))
-    case 'fast'
-        regressor_params.gpr = {struct('kernels', {{'squaredexponential', 'matern32', 'matern52'}})};
-    case 'full'
-        regressor_params.gpr = {struct('kernels', {{'squaredexponential', 'ardsquaredexponential', 'exponential', 'ardexponential', 'matern32', 'matern52', 'ardmatern32', 'ardmatern52', 'rationalquadratic', 'ardrationalquadratic'}})};
-    otherwise
-        error('²»Ö§³ÖµÄ gpr_mode£º%s¡£¿ÉÑ¡£ºfast / full', gpr_mode);
-end
-% ¾ÉÄ¬ÈÏ KNN ²ÎÊı£º'fast' -> k=[3 5 7], distance={'euclidean'}, weighting={'uniform','inverse'}
-regressor_params.knn = {struct('k', [1 3 5 7 9 11 15 21 31], 'distances', {{'euclidean', 'cityblock', 'chebychev', 'cosine', 'correlation'}}, 'weightings', {{'uniform', 'inverse'}})};
-% ================================================================
+regressor_params.svr = {struct('kernels', {{'linear', 'gaussian'}}, 'boxes', [0.1 0.5 1 5], 'scales', {{'auto', 0.5, 1, 2, 5}})};
+regressor_params.rf = {struct('num_trees', [100 200], 'min_leaf', [1 5 10 20])};
+regressor_params.gpr = {struct('kernels', {{'squaredexponential', 'matern32', 'matern52'}})};
+regressor_params.knn = {struct('k', [1 3 5 7 9 11 15], 'distances', {{'euclidean', 'cityblock', 'cosine', 'correlation'}}, 'weightings', {{'uniform', 'inverse'}})};
+% XGBoost/CNN çš„å‚æ•°ç½‘æ ¼æ”¯æŒ quick/full/off ä¸‰æ¡£åˆ‡æ¢ã€‚
+regressor_params.xgboost = build_xgboost_param_grid(generalization_options.model);
+regressor_params.cnn = build_cnn_param_grid(generalization_options.model);
+regressor_params = apply_model_complexity_switches(regressor_params, generalization_options.model);
 
 if ~isfield(feature_selection_param_grid, fs_method)
-    error('²»Ö§³ÖµÄÌØÕ÷Ñ¡Ôñ·½Ê½£º%s', fs_method);
+    error('Unsupported feature selection method: %s', fs_method);
 end
 fs_param_grid = feature_selection_param_grid.(fs_method);
 
+% ä¸ºæœ¬æ¬¡è¿è¡Œç”Ÿæˆå”¯ä¸€æ ‡ç­¾ï¼Œä¾¿äºä¿å­˜ç»“æœå’Œå›æº¯é…ç½®ã€‚
 run_tag = datestr(now, 'yyyymmdd_HHMMSS');
 setenv('HXR_RUN_TAG', run_tag);
 
@@ -116,7 +95,11 @@ if ~exist(summary_dir, 'dir')
     mkdir(summary_dir);
 end
 
+% åœ¨è®­ç»ƒå‰å…ˆæ£€æŸ¥ç›®æ ‡å€¼åˆ†å¸ƒå’Œç¼ºå¤±æƒ…å†µï¼Œå‡å°‘æ— æ•ˆè¿è¡Œã€‚
+diagnose_property_targets(project_root, property_name);
+
 step_total = 0;
+% é˜¶æ®µ 1ï¼šä»…åšé¢„å¤„ç†ï¼Œä¸åšç‰¹å¾ç­›é€‰ï¼Œä½œä¸ºå¯¹ç…§ç»„ã€‚
 if include_preprocessed_group
     for i = 1:numel(regressors)
         step_total = step_total + numel(regressor_params.(regressors{i}));
@@ -128,31 +111,21 @@ for i = 1:numel(fs_param_grid)
     end
 end
 
+fprintf('================ Pipeline Compare Start ================\n');
+fprintf('Property: %s\n', property_name);
+fprintf('Preprocess: %s\n', upper(preproc_mode));
+fprintf('Feature method: %s\n', upper(fs_method));
+fprintf('Generalization switches: %s\n', generalization_options_to_text(generalization_options));
+fprintf('Summary dir: %s\n', summary_dir);
+fprintf('Total combinations: %d\n', step_total);
 step_id = 0;
 all_rows = {};
 temp_dataset_dirs = {};
 global_tic = tic;
-
-% ÔÚÈÎºÎÊı¾İ´¦ÀíÇ°£¬ÏÈ¼ì²éÄ¿±êÁĞÊÇ·ñ´æÔÚÒì³£Öµ
-diagnose_property_targets(project_root, property_name);
-
-fprintf('================ »Ø¹éÆ÷¶Ô±È¿ªÊ¼ ================\n');
-fprintf('Ô¤²â¶ÔÏó£º%s\n', property_name);
-if include_preprocessed_group
-    fprintf('¶Ô±È×é 1£º½öÂË²¨£¨%s£©\n', upper(preproc_mode));
-else
-    fprintf('¶Ô±È×é 1£ºÒÑ¹Ø±Õ\n');
-end
-fprintf('¶Ô±È×é 2£ºÂË²¨ + ÌØÕ÷É¸Ñ¡£¨%s£©\n', upper(fs_method));
-fprintf('SG ½×Êı=%d | SG ´°¿Ú=%d\n', sg_order, sg_window);
-fprintf('MSC Ä£Ê½=%s | SNV Ä£Ê½=%s | »ùÏß¹éÁã=%s | ¹éÁã·¶Î§=%s | È¥¼â´Ì=%s\n', msc_ref_mode, snv_mode, baseline_zero_mode, baseline_zero_scope, despike_mode);
-fprintf('ÌØÕ÷É¸Ñ¡²ÎÊıºòÑ¡£º%s\n', strjoin(cellfun(@param_to_text, fs_param_grid, 'UniformOutput', false), ' / '));
-fprintf('»Ø¹éÆ÷£º%s\n', strjoin(cellfun(@get_model_display_name, regressors, 'UniformOutput', false), ' / '));
-fprintf('½á¹ûÄ¿Â¼£º%s\n', summary_dir);
-fprintf('×Ü×éºÏÊı£º%d\n', step_total);
+best_tracker = struct('initialized', false, 'r2p', -inf, 'rmsep', inf, 'summary', '');
 
 if include_preprocessed_group
-    fprintf('\n[½×¶Î 1/2] ×¼±¸½öÂË²¨Êı¾İ¼¯...\n');
+    fprintf('\n[Stage 1] Preparing preprocessed dataset...\n');
     dataset_pre = prepare_property_dataset(property_name, 'preprocessed', preproc_mode, sg_order, sg_window, 'corr_topk', [], msc_ref_mode, snv_mode, keep_dataset_exports, baseline_zero_mode, despike_mode, baseline_zero_scope);
     temp_dataset_dirs{end + 1} = dataset_pre.paths.dir;
     for i = 1:numel(regressors)
@@ -161,20 +134,20 @@ if include_preprocessed_group
         for j = 1:numel(params)
             step_id = step_id + 1;
             method_param = params{j};
-            fprintf('\n[½ø¶È %d/%d] ½öÂË²¨ | »Ø¹éÆ÷=%s | ²ÎÊı=%s\n', step_id, step_total, get_model_display_name(method_name), param_to_text(method_param));
-            result = train_model_from_dataset(dataset_pre.paths.mat, method_name, method_param);
+            fprintf('\n[Progress %d/%d] preprocessed | model=%s | param=%s\n', step_id, step_total, get_model_display_name(method_name), param_to_text(method_param));
+            result = train_model_with_generalization(dataset_pre.paths.mat, method_name, method_param, generalization_options);
             print_eta(step_id, step_total, global_tic);
-            all_rows(end + 1, :) = build_report_row('½öÂË²¨', 'none', '', get_model_display_name(method_name), param_to_text(method_param), result); %#ok<AGROW>
+            all_rows(end + 1, :) = build_report_row('ä»…æ»¤æ³¢', 'none', '', get_model_display_name(method_name), param_to_text(method_param), result, generalization_options); %#ok<AGROW>
+            best_tracker = print_best_update_if_needed(best_tracker, 'ä»…æ»¤æ³¢', 'none', '', get_model_display_name(method_name), param_to_text(method_param), result);
         end
     end
-else
-    fprintf('\n[½×¶Î 1/2] ÒÑÌø¹ı½öÂË²¨×éÑµÁ·¡£\n');
 end
 
-fprintf('\n[½×¶Î 2/2] ×¼±¸ÌØÕ÷É¸Ñ¡ºóÊı¾İ¼¯...\n');
+% é˜¶æ®µ 2ï¼šé¢„å¤„ç†åå†åšç‰¹å¾é€‰æ‹©ï¼Œæ˜¯ä¸»è¦æ¯”è¾ƒç»„ã€‚
+fprintf('\n[Stage 2] Preparing selected dataset...\n');
 for i = 1:numel(fs_param_grid)
     fs_param = fs_param_grid{i};
-    fprintf('\n---- µ±Ç°ÌØÕ÷É¸Ñ¡£º%s | ²ÎÊı=%s ----\n', upper(fs_method), param_to_text(fs_param));
+    fprintf('\n---- FS=%s | param=%s ----\n', upper(fs_method), param_to_text(fs_param));
     dataset_sel = prepare_property_dataset(property_name, 'selected', preproc_mode, sg_order, sg_window, fs_method, fs_param, msc_ref_mode, snv_mode, keep_dataset_exports, baseline_zero_mode, despike_mode, baseline_zero_scope);
     temp_dataset_dirs{end + 1} = dataset_sel.paths.dir;
     for j = 1:numel(regressors)
@@ -183,19 +156,23 @@ for i = 1:numel(fs_param_grid)
         for k = 1:numel(params)
             step_id = step_id + 1;
             method_param = params{k};
-            fprintf('\n[½ø¶È %d/%d] ÌØÕ÷É¸Ñ¡ºó | %s=%s | »Ø¹éÆ÷=%s | ²ÎÊı=%s\n', ...
-                step_id, step_total, upper(fs_method), param_to_text(fs_param), get_model_display_name(method_name), param_to_text(method_param));
-            result = train_model_from_dataset(dataset_sel.paths.mat, method_name, method_param);
+            fprintf('\n[Progress %d/%d] selected | %s=%s | model=%s | param=%s\n', step_id, step_total, upper(fs_method), param_to_text(fs_param), get_model_display_name(method_name), param_to_text(method_param));
+            result = train_model_with_generalization(dataset_sel.paths.mat, method_name, method_param, generalization_options);
             print_eta(step_id, step_total, global_tic);
-            all_rows(end + 1, :) = build_report_row('ÌØÕ÷É¸Ñ¡ºó', fs_method, param_to_text(fs_param), get_model_display_name(method_name), param_to_text(method_param), result); %#ok<AGROW>
+            all_rows(end + 1, :) = build_report_row('ç‰¹å¾ç­›é€‰å', fs_method, param_to_text(fs_param), get_model_display_name(method_name), param_to_text(method_param), result, generalization_options); %#ok<AGROW>
+            best_tracker = print_best_update_if_needed(best_tracker, 'ç‰¹å¾ç­›é€‰å', fs_method, param_to_text(fs_param), get_model_display_name(method_name), param_to_text(method_param), result);
         end
     end
 end
+
+% å°†å…¨éƒ¨å®éªŒç»“æœæ•´ç†æˆè¡¨æ ¼å¹¶æŒ‰æ³›åŒ–è¡¨ç°æ’åºä¿å­˜ã€‚
 all_results_table = cell2table(all_rows, 'VariableNames', report_var_names());
-all_results_table = sortrows(all_results_table, {'Êı¾İ×éÃû³Æ', '»Ø¹éÆ÷Ãû³Æ', 'R2_P', 'RMSEP'}, {'ascend', 'ascend', 'descend', 'ascend'});
+all_results_table = sortrows(all_results_table, {'æ•°æ®ç»„åç§°', 'å›å½’å™¨åç§°', 'R2_P', 'RMSEP'}, {'ascend', 'ascend', 'descend', 'ascend'});
 summary_table = build_best_group_model_table(all_results_table);
-save(fullfile(summary_dir, 'summary.mat'), 'all_results_table', 'summary_table');
+save(fullfile(summary_dir, 'summary.mat'), 'all_results_table', 'summary_table', 'generalization_options');
 writetable(all_results_table, fullfile(summary_dir, 'all_results.csv'));
+writetable(summary_table, fullfile(summary_dir, 'best_models.csv'));
+write_param_details_file(summary_dir, all_results_table, summary_table);
 
 cleanup_temp_datasets(temp_dataset_dirs);
 cleanup_temp_runtime(project_root);
@@ -203,130 +180,108 @@ setenv('HXR_RUN_TAG', '');
 
 summary = all_results_table;
 
-fprintf('\n================ »Ø¹éÆ÷¶Ô±ÈÍê³É ================\n');
-fprintf('×ÜºÄÊ±£º%s\n', format_duration(toc(global_tic)));
-disp(all_results_table);
-fprintf('½á¹ûÒÑ±£´æµ½£º%s\n', summary_dir);
-fprintf('ÁÙÊ±Êı¾İÒÑÇåÀí¡£\n');
+fprintf('\n================ Pipeline Compare Complete ================\n');
+fprintf('Elapsed: %s\n', format_duration(toc(global_tic)));
+fprintf('Saved to: %s\n', summary_dir);
+end
+
+function row = build_report_row(group_name, fs_method, fs_param_text, model_display_name, train_param_text, result, generalization_options)
+% å°†ä¸€æ¬¡æ¨¡å‹è®­ç»ƒç»“æœæ•´ç†æˆæ±‡æ€»è¡¨çš„ä¸€è¡Œï¼Œä¾¿äºåç»­æ¨ªå‘æ¯”è¾ƒã€‚
+meta = result.dataset_metadata;
+used_band_range_text = '';
+used_feature_count = NaN;
+if isfield(meta, 'used_band_range') && numel(meta.used_band_range) >= 2
+    used_band_range_text = sprintf('%d:%d', meta.used_band_range(1), meta.used_band_range(end));
+end
+if isfield(meta, 'final_feature_count') && ~isempty(meta.final_feature_count)
+    used_feature_count = meta.final_feature_count;
+elseif isfield(meta, 'used_band_idx') && ~isempty(meta.used_band_idx)
+    used_feature_count = numel(meta.used_band_idx);
+elseif isfield(meta, 'X') && ~isempty(meta.X)
+    used_feature_count = size(meta.X, 2);
+end
+rc_rp_gap = abs(result.R2_C - result.R2_P);
+if generalization_options.evaluation.enforce_small_rc_rp_gap
+    gap_flag = ternary_text(rc_rp_gap <= generalization_options.evaluation.rc_rp_gap_threshold, 'é€šè¿‡', 'é£é™©');
+else
+    gap_flag = ternary_text(rc_rp_gap <= generalization_options.evaluation.rc_rp_gap_threshold, 'æ­£å¸¸', 'åå¤§');
+end
+row = {group_name, fs_method, fs_param_text, model_display_name, train_param_text, result.best_param_detail, ...
+    meta.preproc_mode, meta.sg_order, meta.sg_window, meta.msc_ref_mode, meta.snv_mode, meta.baseline_zero_mode, meta.despike_mode, ...
+    used_band_range_text, used_feature_count, ...
+    result.R2_C, result.R2_P, rc_rp_gap, gap_flag, result.RMSEC, result.RMSEP, result.RPD, ...
+    local_result_field(result, 'stage1_R2_C', NaN), local_result_field(result, 'stage1_R2_P', NaN), ...
+    local_result_field(result, 'stage1_RMSEC', NaN), local_result_field(result, 'stage1_RMSEP', NaN), local_result_field(result, 'stage1_RPD', NaN), ...
+    local_result_field(result, 'stage2_R2_C', result.R2_C), local_result_field(result, 'stage2_R2_P', result.R2_P), ...
+    local_result_field(result, 'stage2_RMSEC', result.RMSEC), local_result_field(result, 'stage2_RMSEP', result.RMSEP), local_result_field(result, 'stage2_RPD', result.RPD), ...
+    ternary_text(result.used_external_validation, 'å¼€å¯', 'å…³é—­'), ...
+    ternary_text(result.used_nested_cv_selection, 'å¼€å¯', 'å…³é—­'), ...
+    ternary_text(result.used_stable_feature_selection, 'å¼€å¯', 'å…³é—­'), ...
+    ternary_text(result.used_data_augmentation, 'å¼€å¯', 'å…³é—­'), ...
+    generalization_options_to_text(generalization_options), result.result_mat_path, result.regression_plot_path, ...
+    local_result_field(result, 'stage1_result_mat_path', ''), local_result_field(result, 'stage2_result_mat_path', ''), ...
+    local_result_field(result, 'stage1_regression_plot_path', ''), local_result_field(result, 'stage2_regression_plot_path', '')};
+end
+
+function names = report_var_names()
+names = {'æ•°æ®ç»„åç§°', 'ç‰¹å¾ç­›é€‰æ–¹æ³•', 'ç‰¹å¾ç­›é€‰å‚æ•°', 'å›å½’å™¨åç§°', 'è¾“å…¥å‚æ•°', 'æœ€ä¼˜å‚æ•°è¯¦æƒ…', ...
+    'é¢„å¤„ç†æ–¹å¼', 'SGé˜¶æ•°', 'SGçª—å£', 'MSCæ¨¡å¼', 'SNVæ¨¡å¼', 'åŸºçº¿å½’é›¶æ¨¡å¼', 'å»å°–åˆºæ¨¡å¼', ...
+    'ä½¿ç”¨æ³¢æ®µèŒƒå›´', 'æœ€ç»ˆç‰¹å¾ç»´æ•°', 'R2_C', 'R2_P', 'R2å·®å€¼_RC_RP', 'RC_RPå·®å€¼åˆ¤æ–­', 'RMSEC', 'RMSEP', 'RPD', ...
+    'ç¬¬ä¸€æ¬¡R2_C', 'ç¬¬ä¸€æ¬¡R2_P', 'ç¬¬ä¸€æ¬¡RMSEC', 'ç¬¬ä¸€æ¬¡RMSEP', 'ç¬¬ä¸€æ¬¡RPD', ...
+    'ç¬¬äºŒæ¬¡R2_C', 'ç¬¬äºŒæ¬¡R2_P', 'ç¬¬äºŒæ¬¡RMSEC', 'ç¬¬äºŒæ¬¡RMSEP', 'ç¬¬äºŒæ¬¡RPD', ...
+    'å¤–éƒ¨éªŒè¯', 'åµŒå¥—CVç‰¹å¾é€‰æ‹©', 'ç¨³å®šç‰¹å¾ç­›é€‰', 'æ•°æ®å¢å¼º', 'æ³›åŒ–ä¼˜åŒ–é…ç½®', 'æ¨¡å‹ç»“æœMATè·¯å¾„', 'å›å½’å›¾åƒè·¯å¾„', ...
+    'ç¬¬ä¸€æ¬¡æ¨¡å‹MATè·¯å¾„', 'ç¬¬äºŒæ¬¡æ¨¡å‹MATè·¯å¾„', 'ç¬¬ä¸€æ¬¡å›å½’å›¾åƒè·¯å¾„', 'ç¬¬äºŒæ¬¡å›å½’å›¾åƒè·¯å¾„'};
+end
+
+function value = local_result_field(result, field_name, default_value)
+if isfield(result, field_name) && ~isempty(result.(field_name))
+    value = result.(field_name);
+else
+    value = default_value;
+end
+end
+
+function summary_table = build_best_group_model_table(all_results_table)
+% ä»å…¨é‡ç»“æœé‡ŒæŒ‘å‡ºæ¯ä¸ªâ€œæ•°æ®ç»„-æ¨¡å‹â€ç»„åˆä¸‹è¡¨ç°æœ€å¥½çš„è®°å½•ã€‚
+rows = {};
+group_col = all_results_table{:, 'æ•°æ®ç»„åç§°'};
+model_col = all_results_table{:, 'å›å½’å™¨åç§°'};
+group_names = unique(group_col, 'stable');
+model_names = unique(model_col, 'stable');
+for i = 1:numel(group_names)
+    for j = 1:numel(model_names)
+        mask = strcmp(group_col, group_names{i}) & strcmp(model_col, model_names{j});
+        T = all_results_table(mask, :);
+        if height(T) == 0
+            continue;
+        end
+        T = sortrows(T, {'R2_P', 'RMSEP'}, {'descend', 'ascend'});
+        rows(end + 1, :) = table2cell(T(1, :)); %#ok<AGROW>
+    end
+end
+summary_table = cell2table(rows, 'VariableNames', report_var_names());
 end
 
 function diagnose_property_targets(project_root, property_name)
+% è®­ç»ƒå‰æ£€æŸ¥ç›®æ ‡åˆ—æ˜¯å¦å­˜åœ¨ç¼ºå¤±ã€æ— ç©·å€¼æˆ–å¼‚å¸¸åˆ†å¸ƒã€‚
 all_csv_path = fullfile(project_root, 'data', 'physical', 'all_csv_data.csv');
 T = readtable(all_csv_path, 'VariableNamingRule', 'preserve');
 if ~ismember(property_name, T.Properties.VariableNames)
-    error('all_csv_data.csv ÖĞ²»´æÔÚÄ¿±êÁĞ£º%s', property_name);
+    error('Target column not found: %s', property_name);
 end
-
 y = T{:, property_name};
 if iscell(y)
     y = str2double(string(y));
 end
 y = double(y(:));
-valid = isfinite(y);
-valid_y = y(valid);
-bad_idx = find(~valid);
-
-has_csv_name = ismember('csv_name', T.Properties.VariableNames);
-if has_csv_name
-    csv_names = string(T{:, 'csv_name'});
-else
-    csv_names = strings(height(T), 1);
-end
-
-fprintf('\n================ Ä¿±êÖµÕï¶Ï ================\n');
-fprintf('Ô¤²â¶ÔÏó£º%s\n', property_name);
-fprintf('Ô­Ê¼Ñù±¾Êı£º%d\n', numel(y));
-fprintf('ÓĞĞ§ÖµÊıÁ¿£º%d\n', nnz(valid));
-fprintf('NaN/Inf ÊıÁ¿£º%d\n', nnz(~valid));
-
-if ~isempty(bad_idx)
-    fprintf('Òì³£ĞĞ£¨ĞĞºÅ -> csv_name£©£º\n');
-    show_n = min(20, numel(bad_idx));
-    for i = 1:show_n
-        idx = bad_idx(i);
-        if has_csv_name
-            fprintf('  %d -> %s\n', idx, csv_names(idx));
-        else
-            fprintf('  %d\n', idx);
-        end
-    end
-    if numel(bad_idx) > show_n
-        fprintf('  ... ÆäÓà»¹ÓĞ %d ĞĞÒì³£\n', numel(bad_idx) - show_n);
-    end
-
-    report = table(bad_idx, y(bad_idx), 'VariableNames', {'row_index', 'raw_value'});
-    if has_csv_name
-        report.csv_name = csv_names(bad_idx);
-    end
-    report_path = fullfile(project_root, 'Result', 'Summary', ['diag_' property_to_tag(property_name) '_invalid_rows.csv']);
-    try
-        writetable(report, report_path);
-        fprintf('Òì³£ĞĞ±¨¸æÒÑ±£´æ£º%s\n', report_path);
-    catch
-    end
-end
-
+valid_y = y(isfinite(y));
 if isempty(valid_y)
-    error('Ä¿±êÁĞ %s Ã»ÓĞÓĞĞ§ÊıÖµ¡£', property_name);
+    error('Target column has no finite values: %s', property_name);
 end
-
-fprintf('¾ùÖµ£º%.6f\n', mean(valid_y));
-fprintf('±ê×¼²î£º%.6f\n', std(valid_y));
-fprintf('×îĞ¡Öµ£º%.6f\n', min(valid_y));
-fprintf('×î´óÖµ£º%.6f\n', max(valid_y));
-fprintf('Î¨Ò»Öµ¸öÊı£º%d\n', numel(unique(valid_y)));
-q = quantile(valid_y, [0.25 0.50 0.75]);
-fprintf('Q1£º%.6f | ÖĞÎ»Êı£º%.6f | Q3£º%.6f\n', q(1), q(2), q(3));
-fprintf('===========================================\n\n');
-end
-
-function row = build_report_row(group_name, fs_method, fs_param_text, model_display_name, train_param_text, result)
-meta = result.dataset_metadata;
-model_mat_path = '';
-regression_plot_path = '';
-used_band_range_text = '';
-used_band_idx_text = '';
-if isfield(result, 'result_mat_path')
-    model_mat_path = result.result_mat_path;
-end
-if isfield(result, 'regression_plot_path')
-    regression_plot_path = result.regression_plot_path;
-end
-if isfield(meta, 'used_band_range') && numel(meta.used_band_range) >= 2
-    used_band_range_text = sprintf('%d:%d', meta.used_band_range(1), meta.used_band_range(end));
-end
-if isfield(meta, 'used_band_idx') && ~isempty(meta.used_band_idx)
-    used_band_idx_text = band_idx_to_text(meta.used_band_idx);
-end
-row = { ...
-    group_name, ...
-    fs_method, ...
-    fs_param_text, ...
-    model_display_name, ...
-    train_param_text, ...
-    result.best_param_detail, ...
-    meta.preproc_mode, ...
-    meta.sg_order, ...
-    meta.sg_window, ...
-    meta.msc_ref_mode, ...
-    meta.snv_mode, ...
-    meta.baseline_zero_mode, ...
-    meta.despike_mode, ...
-    used_band_range_text, ...
-    used_band_idx_text, ...
-    result.R2_C, ...
-    result.R2_P, ...
-    result.RMSEC, ...
-    result.RMSEP, ...
-    result.RPD, ...
-    model_mat_path, ...
-    regression_plot_path};
+fprintf('Target diagnostics | n=%d | mean=%.6f | std=%.6f | min=%.6f | max=%.6f\n', numel(y), mean(valid_y), std(valid_y), min(valid_y), max(valid_y));
 end
 
 function cleanup_temp_datasets(temp_dataset_dirs)
-if isempty(temp_dataset_dirs)
-    return;
-end
 unique_dirs = unique(temp_dataset_dirs, 'stable');
 for i = 1:numel(unique_dirs)
     d = unique_dirs{i};
@@ -340,9 +295,7 @@ end
 end
 
 function cleanup_temp_runtime(project_root)
-paths_to_try = { ...
-    fullfile(project_root, 'Result', 'Temp'), ...
-    fullfile(project_root, 'Result', 'Black_White', 'post_processing_data.csv')};
+paths_to_try = {fullfile(project_root, 'Result', 'Temp'), fullfile(project_root, 'Result', 'Black_White', 'post_processing_data.csv')};
 for i = 1:numel(paths_to_try)
     p = paths_to_try{i};
     if exist(p, 'dir')
@@ -359,71 +312,108 @@ for i = 1:numel(paths_to_try)
 end
 end
 
-function names = report_var_names()
-names = {'Êı¾İ×éÃû³Æ', 'ÌØÕ÷É¸Ñ¡·½·¨', 'ÌØÕ÷É¸Ñ¡²ÎÊı', '»Ø¹éÆ÷Ãû³Æ', 'ÊäÈë²ÎÊı', '×îÓÅ²ÎÊıÏêÇé', ...
-    'Ô¤´¦Àí·½Ê½', 'SG½×Êı', 'SG´°¿Ú', 'MSCÄ£Ê½', 'SNVÄ£Ê½', '»ùÏß¹éÁãÄ£Ê½', 'È¥¼â´ÌÄ£Ê½', ...
-    'Ê¹ÓÃ²¨¶Î·¶Î§', 'Ê¹ÓÃ²¨¶ÎË÷Òı', ...
-    'R2_C', 'R2_P', 'RMSEC', 'RMSEP', 'RPD', ...
-    'Ä£ĞÍ½á¹ûMATÂ·¾¶', '»Ø¹éÍ¼ÏñÂ·¾¶'};
-end
-
-function summary_table = build_best_group_model_table(all_results_table)
-rows = {};
-group_col = all_results_table{:, 'Êı¾İ×éÃû³Æ'};
-model_col = all_results_table{:, '»Ø¹éÆ÷Ãû³Æ'};
-group_names = unique(group_col, 'stable');
-model_names = unique(model_col, 'stable');
-for i = 1:numel(group_names)
-    for j = 1:numel(model_names)
-        mask = strcmp(group_col, group_names{i}) & strcmp(model_col, model_names{j});
-        T = all_results_table(mask, :);
-        if height(T) == 0
-            continue;
-        end
-        T = sortrows(T, {'R2_P', 'RMSEP'}, {'descend', 'ascend'});
-        rows(end + 1, :) = table2cell(T(1, :)); %#ok<AGROW>
-    end
-end
-summary_table = cell2table(rows, 'VariableNames', report_var_names());
-summary_table = sortrows(summary_table, {'Êı¾İ×éÃû³Æ', 'R2_P', 'RMSEP'}, {'ascend', 'descend', 'ascend'});
-end
-
-function report_top5 = build_top5_report(all_results_table)
-rows = {};
-model_col = all_results_table{:, '»Ø¹éÆ÷Ãû³Æ'};
-model_names = unique(model_col, 'stable');
-for i = 1:numel(model_names)
-    model_display_name = model_names{i};
-    T = all_results_table(strcmp(model_col, model_display_name), :);
-    T = sortrows(T, {'R2_P', 'RMSEP'}, {'descend', 'ascend'});
-    top_n = min(5, height(T));
-    for k = 1:top_n
-        rows(end + 1, :) = [{k}, table2cell(T(k, :))]; %#ok<AGROW>
-    end
-end
-report_top5 = cell2table(rows, 'VariableNames', [{'ÅÅÃû'}, report_var_names()]);
-end
-
 function txt = param_to_text(param)
 if isempty(param)
-    txt = 'Ä¬ÈÏ';
+    txt = 'default';
 elseif isnumeric(param)
     txt = mat2str(param);
 elseif ischar(param)
     txt = param;
-elseif iscell(param)
-    txt = 'cell';
+elseif isstring(param)
+    txt = char(param);
+elseif isstruct(param)
+    txt = struct_to_single_line_text(param);
 else
     txt = 'custom';
+end
+txt = sanitize_inline_text(txt);
+end
+
+function txt = struct_to_single_line_text(s)
+fields = fieldnames(s);
+parts = cell(1, numel(fields));
+for i = 1:numel(fields)
+    name = fields{i};
+    value = s.(name);
+    parts{i} = sprintf('%s=%s', name, value_to_inline_text(value));
+end
+txt = strjoin(parts, ', ');
+end
+
+function txt = value_to_inline_text(value)
+if isnumeric(value) || islogical(value)
+    txt = mat2str(value);
+elseif ischar(value)
+    txt = value;
+elseif isstring(value)
+    txt = char(value);
+elseif iscell(value)
+    txt = ['{' strjoin(cellfun(@value_to_inline_text, value, 'UniformOutput', false), ', ') '}'];
+elseif isstruct(value)
+    txt = ['(' struct_to_single_line_text(value) ')'];
+else
+    txt = strtrim(evalc('disp(value)'));
+end
+txt = sanitize_inline_text(txt);
+end
+
+function txt = sanitize_inline_text(txt)
+txt = char(string(txt));
+txt = strrep(txt, sprintf('\r'), ' ');
+txt = strrep(txt, sprintf('\n'), ' ');
+txt = regexprep(txt, '\s+', ' ');
+txt = strtrim(txt);
+end
+
+function write_param_details_file(summary_dir, all_results_table, summary_table)
+lines = {};
+lines{end + 1} = '=== all_results å‚æ•°è¯¦æƒ… ===';
+lines = append_table_param_details(lines, all_results_table);
+lines{end + 1} = ' ';
+lines{end + 1} = '=== best_models å‚æ•°è¯¦æƒ… ===';
+lines = append_table_param_details(lines, summary_table);
+writecell(lines(:), fullfile(summary_dir, 'param_details.txt'), 'FileType', 'text');
+end
+
+function lines = append_table_param_details(lines, T)
+for i = 1:height(T)
+    lines{end + 1} = sprintf('[%d] ç»„=%s | æ¨¡å‹=%s | ç‰¹å¾=%s | å‚æ•°=%s', ...
+        i, char(string(T{i, 'æ•°æ®ç»„åç§°'})), char(string(T{i, 'å›å½’å™¨åç§°'})), ...
+        char(string(T{i, 'ç‰¹å¾ç­›é€‰å‚æ•°'})), char(string(T{i, 'è¾“å…¥å‚æ•°'})));
+    lines{end + 1} = sprintf('    æœ€ä¼˜è¯¦æƒ…: %s', char(string(T{i, 'æœ€ä¼˜å‚æ•°è¯¦æƒ…'})));
+    lines{end + 1} = sprintf('    æŒ‡æ ‡: R2_C=%.4f | R2_P=%.4f | RMSEC=%.4f | RMSEP=%.4f | RPD=%.4f', ...
+        T{i, 'R2_C'}, T{i, 'R2_P'}, T{i, 'RMSEC'}, T{i, 'RMSEP'}, T{i, 'RPD'});
+    lines{end + 1} = ' ';
 end
 end
 
 function print_eta(step_id, step_total, global_tic)
 elapsed_sec = toc(global_tic);
 avg_sec = elapsed_sec / max(step_id, 1);
-remain_steps = step_total - step_id;
-remain_sec = avg_sec * remain_steps;
-fprintf('ÒÑºÄÊ±£º%s | Ô¤¼ÆÊ£Óà£º%s\n', format_duration(elapsed_sec), format_duration(remain_sec));
+remain_sec = avg_sec * (step_total - step_id);
+fprintf('Elapsed: %s | ETA: %s\n', format_duration(elapsed_sec), format_duration(remain_sec));
+end
+
+function tracker = print_best_update_if_needed(tracker, group_name, fs_method, fs_param_text, model_display_name, train_param_text, result)
+is_better = ~tracker.initialized || result.R2_P > tracker.r2p || ...
+    (abs(result.R2_P - tracker.r2p) <= 1e-12 && result.RMSEP < tracker.rmsep);
+if ~is_better
+    return;
+end
+tracker.initialized = true;
+tracker.r2p = result.R2_P;
+tracker.rmsep = result.RMSEP;
+tracker.summary = sprintf('[Current Best] group=%s | fs=%s%s | model=%s | R2_P=%.4f | RMSEP=%.4f | RPD=%.4f | param=%s', ...
+    group_name, upper(fs_method), format_fs_suffix(fs_param_text), model_display_name, result.R2_P, result.RMSEP, result.RPD, train_param_text);
+fprintf('%s\n', tracker.summary);
+end
+
+function suffix = format_fs_suffix(fs_param_text)
+if isempty(fs_param_text)
+    suffix = '';
+else
+    suffix = ['=' fs_param_text];
+end
 end
 
 function txt = format_duration(sec)
@@ -452,6 +442,10 @@ switch lower(method)
         name = 'GPR';
     case 'knn'
         name = 'KNN';
+    case 'xgboost'
+        name = 'XGBoost';
+    case 'cnn'
+        name = 'CNN';
     otherwise
         name = upper(method);
 end
@@ -470,14 +464,292 @@ function txt = band_idx_to_text(idx)
 idx = idx(:)';
 if isempty(idx)
     txt = '';
-    return;
-end
-if numel(idx) <= 40
+elseif numel(idx) <= 40
     txt = strjoin(arrayfun(@num2str, idx, 'UniformOutput', false), ';');
 else
-    head_txt = strjoin(arrayfun(@num2str, idx(1:20), 'UniformOutput', false), ';');
-    tail_txt = strjoin(arrayfun(@num2str, idx(end-19:end), 'UniformOutput', false), ';');
-    txt = sprintf('%s;...;%s (¹²%d¸ö)', head_txt, tail_txt, numel(idx));
+    txt = sprintf('%s;...;%s (total=%d)', strjoin(arrayfun(@num2str, idx(1:20), 'UniformOutput', false), ';'), strjoin(arrayfun(@num2str, idx(end-19:end), 'UniformOutput', false), ';'), numel(idx));
+end
 end
 
+function opts = default_generalization_options()
+opts = struct();
+opts.feature = struct( ...
+    'nested_cv_selection', false, ...
+    'inner_cv_folds', 5, ...
+    'use_stable_features', false, ...
+    'stability_threshold', 0.60, ...
+    'post_feature_pca_projection', false, ...
+    'post_feature_pca_components', 20);
+opts.data_processing = struct('data_augmentation', false, 'augmentation_copies', 1, 'noise_std', 0.003, 'max_shift', 2);
+opts.validation = struct('use_external_holdout', false, 'external_ratio', 0.20, 'random_seed', 42);
+opts.model = struct( ...
+    'simplify_pls_pcr', false, ...
+    'pls_max_lv_cap', 40, ...
+    'pcr_max_pc_cap', 40, ...
+    'l1_l2_regularization', false, ...
+    'l2_lambda', 1e-4, ...
+    'dropout', false, ...
+    'dropout_rate', 0.30, ...
+    'early_stopping', false, ...
+    'validation_patience', 8, ...
+    'xgboost_simplify', false, ...
+    'xgb_max_depth_cap', 4, ...
+    'xgb_learn_rate_cap', 0.03, ...
+    'xgb_min_leaf_floor', 8, ...
+    'xgboost_grid_mode', 'quick', ...
+    'xgb_num_learning_cycles', [], ...
+    'xgb_learn_rates', [], ...
+    'xgb_max_num_splits', [], ...
+    'xgb_min_leaf_sizes', [], ...
+    'cnn_simplify', false, ...
+    'cnn_max_blocks', 2, ...
+    'cnn_fc_units_cap', 48, ...
+    'cnn_grid_mode', 'quick', ...
+    'cnn_conv_channel_sets', {{}}, ...
+    'cnn_fc_units_grid', [], ...
+    'cnn_dropout_rates', [], ...
+    'cnn_max_epochs_grid', [], ...
+    'cnn_mini_batch_sizes', [], ...
+    'cnn_initial_learn_rates', []);
+opts.evaluation = struct('enforce_small_rc_rp_gap', false, 'rc_rp_gap_threshold', 0.05, 'save_smooth_and_feature_plots', true);
+end
+
+function opts = normalize_generalization_options(opts)
+opts = merge_struct_recursive(default_generalization_options(), opts);
+end
+
+function out = merge_struct_recursive(base, override)
+out = base;
+if ~isstruct(override)
+    return;
+end
+fields = fieldnames(override);
+for i = 1:numel(fields)
+    key = fields{i};
+    if isfield(base, key) && isstruct(base.(key)) && isstruct(override.(key))
+        out.(key) = merge_struct_recursive(base.(key), override.(key));
+    else
+        out.(key) = override.(key);
+    end
+end
+end
+
+function regressor_params = apply_model_complexity_switches(regressor_params, model_opts)
+% æ ¹æ®â€œæ¨¡å‹ç®€åŒ–â€å¼€å…³æ”¶ç¼©å‚æ•°ç©ºé—´ï¼Œä¼˜å…ˆæŠ‘åˆ¶è¿‡æ‹Ÿåˆé£é™©ã€‚
+if ~model_opts.simplify_pls_pcr
+else
+    for i = 1:numel(regressor_params.pls)
+        regressor_params.pls{i}.max_lv = min(regressor_params.pls{i}.max_lv, model_opts.pls_max_lv_cap);
+        regressor_params.pls{i}.cv_fold = min(regressor_params.pls{i}.cv_fold, 5);
+    end
+    for i = 1:numel(regressor_params.pcr)
+        regressor_params.pcr{i}.max_pc = min(regressor_params.pcr{i}.max_pc, model_opts.pcr_max_pc_cap);
+    end
+end
+if isfield(regressor_params, 'xgboost') && model_opts.xgboost_simplify
+    for i = 1:numel(regressor_params.xgboost)
+        regressor_params.xgboost{i}.max_num_splits = min(regressor_params.xgboost{i}.max_num_splits, 2^model_opts.xgb_max_depth_cap - 1);
+        regressor_params.xgboost{i}.learn_rate = min(regressor_params.xgboost{i}.learn_rate, model_opts.xgb_learn_rate_cap);
+        regressor_params.xgboost{i}.min_leaf_size = max(regressor_params.xgboost{i}.min_leaf_size, model_opts.xgb_min_leaf_floor);
+        regressor_params.xgboost{i}.num_learning_cycles = min(regressor_params.xgboost{i}.num_learning_cycles, 250);
+    end
+end
+if isfield(regressor_params, 'cnn') && model_opts.cnn_simplify
+    for i = 1:numel(regressor_params.cnn)
+        regressor_params.cnn{i}.conv_channels = regressor_params.cnn{i}.conv_channels(1:min(numel(regressor_params.cnn{i}.conv_channels), model_opts.cnn_max_blocks));
+        regressor_params.cnn{i}.fc_units = min(regressor_params.cnn{i}.fc_units, model_opts.cnn_fc_units_cap);
+        regressor_params.cnn{i}.max_epochs = min(regressor_params.cnn{i}.max_epochs, 100);
+    end
+end
+end
+
+function txt = generalization_options_to_text(opts)
+parts = {};
+if opts.feature.nested_cv_selection, parts{end + 1} = 'nested_fs'; end %#ok<AGROW>
+if opts.feature.use_stable_features, parts{end + 1} = 'stable_fs'; end %#ok<AGROW>
+if isfield(opts.feature, 'post_feature_pca_projection') && opts.feature.post_feature_pca_projection
+    parts{end + 1} = ['post_pca_' num2str(opts.feature.post_feature_pca_components)]; %#ok<AGROW>
+end
+if opts.data_processing.data_augmentation, parts{end + 1} = 'augment'; end %#ok<AGROW>
+if opts.validation.use_external_holdout, parts{end + 1} = 'external'; end %#ok<AGROW>
+if opts.model.simplify_pls_pcr, parts{end + 1} = 'simple_pls_pcr'; end %#ok<AGROW>
+if opts.model.l1_l2_regularization, parts{end + 1} = 'l2'; end %#ok<AGROW>
+if opts.model.dropout, parts{end + 1} = 'dropout'; end %#ok<AGROW>
+if opts.model.early_stopping, parts{end + 1} = 'early_stop'; end %#ok<AGROW>
+if opts.model.xgboost_simplify, parts{end + 1} = 'xgb_simple'; end %#ok<AGROW>
+if opts.model.cnn_simplify, parts{end + 1} = 'cnn_simple'; end %#ok<AGROW>
+parts{end + 1} = ['xgb_grid_' char(string(opts.model.xgboost_grid_mode))]; %#ok<AGROW>
+parts{end + 1} = ['cnn_grid_' char(string(opts.model.cnn_grid_mode))]; %#ok<AGROW>
+if isempty(parts)
+    txt = 'å…¨éƒ¨å…³é—­';
+else
+    txt = strjoin(parts, ' | ');
+end
+end
+
+function grid = build_xgboost_param_grid(model_opts)
+% XGBoost ä¸“ç”¨å‚æ•°ç½‘æ ¼ï¼š
+% off=å•ç»„å‚æ•°ï¼Œquick=å°ç½‘æ ¼ï¼Œfull=ç³»ç»Ÿæœç´¢ã€‚
+custom_grid = build_custom_xgboost_grid(model_opts);
+if ~isempty(custom_grid)
+    grid = custom_grid;
+    return;
+end
+mode = lower(strtrim(char(model_opts.xgboost_grid_mode)));
+switch mode
+    case 'off'
+        grid = {struct('num_learning_cycles', 300, 'learn_rate', 0.05, 'max_num_splits', 15, 'min_leaf_size', 5)};
+    case 'quick'
+        grid = { ...
+            struct('num_learning_cycles', 200, 'learn_rate', 0.05, 'max_num_splits', 15, 'min_leaf_size', 5), ...
+            struct('num_learning_cycles', 300, 'learn_rate', 0.03, 'max_num_splits', 15, 'min_leaf_size', 8), ...
+            struct('num_learning_cycles', 400, 'learn_rate', 0.03, 'max_num_splits', 31, 'min_leaf_size', 8)};
+    case 'full'
+        cycles = [150 250 400 600];
+        rates = [0.01 0.03 0.05];
+        splits = [7 15 31];
+        leaves = [3 5 8 12];
+        idx = 0;
+        grid = cell(numel(cycles) * numel(rates) * numel(splits) * numel(leaves), 1);
+        for i = 1:numel(cycles)
+            for j = 1:numel(rates)
+                for k = 1:numel(splits)
+                    for t = 1:numel(leaves)
+                        idx = idx + 1;
+                        grid{idx} = struct('num_learning_cycles', cycles(i), 'learn_rate', rates(j), 'max_num_splits', splits(k), 'min_leaf_size', leaves(t));
+                    end
+                end
+            end
+        end
+    otherwise
+        error('Unsupported xgboost_grid_mode: %s', mode);
+end
+end
+
+function grid = build_custom_xgboost_grid(model_opts)
+cycles = numeric_row_or_empty(model_opts, 'xgb_num_learning_cycles');
+rates = numeric_row_or_empty(model_opts, 'xgb_learn_rates');
+splits = numeric_row_or_empty(model_opts, 'xgb_max_num_splits');
+leaves = numeric_row_or_empty(model_opts, 'xgb_min_leaf_sizes');
+if isempty(cycles) || isempty(rates) || isempty(splits) || isempty(leaves)
+    grid = {};
+    return;
+end
+idx = 0;
+grid = cell(numel(cycles) * numel(rates) * numel(splits) * numel(leaves), 1);
+for i = 1:numel(cycles)
+    for j = 1:numel(rates)
+        for k = 1:numel(splits)
+            for t = 1:numel(leaves)
+                idx = idx + 1;
+                grid{idx} = struct('num_learning_cycles', cycles(i), 'learn_rate', rates(j), 'max_num_splits', splits(k), 'min_leaf_size', leaves(t));
+            end
+        end
+    end
+end
+end
+
+function grid = build_cnn_param_grid(model_opts)
+% CNN ä¸“ç”¨å‚æ•°ç½‘æ ¼ï¼š
+% off=å•ç»„å‚æ•°ï¼Œquick=å°ç½‘æ ¼ï¼Œfull=ç³»ç»Ÿæœç´¢ã€‚
+custom_grid = build_custom_cnn_grid(model_opts);
+if ~isempty(custom_grid)
+    grid = custom_grid;
+    return;
+end
+mode = lower(strtrim(char(model_opts.cnn_grid_mode)));
+switch mode
+    case 'off'
+        grid = {struct('conv_channels', [16 32], 'fc_units', 64, 'dropout_rate', 0.20, 'max_epochs', 100, 'mini_batch_size', 16, 'initial_learn_rate', 1e-3)};
+    case 'quick'
+        grid = { ...
+            struct('conv_channels', [16 32], 'fc_units', 48, 'dropout_rate', 0.20, 'max_epochs', 100, 'mini_batch_size', 16, 'initial_learn_rate', 1e-3), ...
+            struct('conv_channels', [16 32], 'fc_units', 64, 'dropout_rate', 0.30, 'max_epochs', 120, 'mini_batch_size', 16, 'initial_learn_rate', 5e-4), ...
+            struct('conv_channels', [32 64], 'fc_units', 64, 'dropout_rate', 0.30, 'max_epochs', 120, 'mini_batch_size', 8, 'initial_learn_rate', 5e-4)};
+    case 'full'
+        conv_sets = {[8 16], [16 32], [16 32 64], [32 64]};
+        fc_units = [32 48 64 96];
+        dropout_rates = [0.10 0.20 0.30 0.40];
+        max_epochs = [80 120 160];
+        batch_sizes = [8 16];
+        learn_rates = [1e-3 5e-4];
+        idx = 0;
+        grid = cell(numel(conv_sets) * numel(fc_units) * numel(dropout_rates) * numel(max_epochs) * numel(batch_sizes) * numel(learn_rates), 1);
+        for a = 1:numel(conv_sets)
+            for b = 1:numel(fc_units)
+                for c = 1:numel(dropout_rates)
+                    for d = 1:numel(max_epochs)
+                        for e = 1:numel(batch_sizes)
+                            for f = 1:numel(learn_rates)
+                                idx = idx + 1;
+                                grid{idx} = struct('conv_channels', conv_sets{a}, 'fc_units', fc_units(b), 'dropout_rate', dropout_rates(c), 'max_epochs', max_epochs(d), 'mini_batch_size', batch_sizes(e), 'initial_learn_rate', learn_rates(f));
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    otherwise
+        error('Unsupported cnn_grid_mode: %s', mode);
+end
+end
+
+function grid = build_custom_cnn_grid(model_opts)
+conv_sets = cell_grid_or_empty(model_opts, 'cnn_conv_channel_sets');
+fc_units = numeric_row_or_empty(model_opts, 'cnn_fc_units_grid');
+dropout_rates = numeric_row_or_empty(model_opts, 'cnn_dropout_rates');
+max_epochs = numeric_row_or_empty(model_opts, 'cnn_max_epochs_grid');
+batch_sizes = numeric_row_or_empty(model_opts, 'cnn_mini_batch_sizes');
+learn_rates = numeric_row_or_empty(model_opts, 'cnn_initial_learn_rates');
+if isempty(conv_sets) || isempty(fc_units) || isempty(dropout_rates) || isempty(max_epochs) || isempty(batch_sizes) || isempty(learn_rates)
+    grid = {};
+    return;
+end
+idx = 0;
+grid = cell(numel(conv_sets) * numel(fc_units) * numel(dropout_rates) * numel(max_epochs) * numel(batch_sizes) * numel(learn_rates), 1);
+for a = 1:numel(conv_sets)
+    for b = 1:numel(fc_units)
+        for c = 1:numel(dropout_rates)
+            for d = 1:numel(max_epochs)
+                for e = 1:numel(batch_sizes)
+                    for f = 1:numel(learn_rates)
+                        idx = idx + 1;
+                        grid{idx} = struct('conv_channels', conv_sets{a}, 'fc_units', fc_units(b), 'dropout_rate', dropout_rates(c), 'max_epochs', max_epochs(d), 'mini_batch_size', batch_sizes(e), 'initial_learn_rate', learn_rates(f));
+                    end
+                end
+            end
+        end
+    end
+end
+end
+
+function values = numeric_row_or_empty(s, field_name)
+if ~isfield(s, field_name) || isempty(s.(field_name))
+    values = [];
+    return;
+end
+values = unique(double(s.(field_name)(:)'));
+end
+
+function values = cell_grid_or_empty(s, field_name)
+if ~isfield(s, field_name) || isempty(s.(field_name))
+    values = {};
+    return;
+end
+raw = s.(field_name);
+if isnumeric(raw)
+    values = {raw};
+elseif iscell(raw)
+    values = raw;
+else
+    values = {raw};
+end
+end
+
+function out = ternary_text(cond, true_text, false_text)
+if cond
+    out = true_text;
+else
+    out = false_text;
+end
 end
